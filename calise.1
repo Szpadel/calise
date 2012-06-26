@@ -1,0 +1,132 @@
+.TH calise 1 "May 18 2012" "Nicolò Barbon"
+.SH NAME
+Calise \- Camera Light Sensor Project
+.SH SYNOPSIS
+.B calise
+.BR [SWITCH]
+.PP
+.SH DESCRIPTION
+Calise is a python program that uses any system supported camera as a light
+sensor. The program calculates ambient brightness and suggests (or sets) the
+screen's correct backlight using a webcam.
+
+Since the program grabs the camera for the whole execution, grantes really
+high fidelity computations,
+.I but
+should not be used in background (like a daemon for example) because,
+despite cpu time usage is low, it causes too much wakeups.
+From version 0.1.0 there a daemon version with negligible power usage,
+refer to
+.I calised
+manual for further informations.
+
+.PP
+.SH INTERACTIVE CONTROL
+Calise command-line interface can be controlled with keyboard.
+.TP
+q
+end execution (unloads the camera and exits)
+.TP
+p or SPACEBAR
+pause/resume execution (unloads the camera until another 
+.I p
+or 
+.I SPACEBAR
+is pressed)
+.TP
+e
+export data (exports whole data to calise.csv, see 
+.I logdata
+switch for further details)
+.TP
+a
+same as logdata switch, stores values out of the averaging range (when 
+.I e
+is pressed values will be exported)
+.PP
+.SH SWITCHES
+.TP
+.B \-\-profile <string>
+uses the given profile name or path.
+.TP
+.B \-\-verbose
+Verbose output
+.TP
+.B \-\-calibrate, \-\-configure
+starts program calibration, then exits. Creates a profile in user's config folder (often ~/.config/calise/). It sets the camera to use, the position of the backlight file and brightness'
+.I offset
+and
+.I delta
+ \
+NOTE: in the fourth step of configuration the higher brightness, the greater scale's precision.
+.TP
+.B \-\-gap <float>
+in seconds, indicates the time interval between captures, default values are 0.8 for screencasted capture and 0.6 for simple capture (the two values are actually the ones with better 'resource usage' / 'performance' ratio).
+.TP
+.B \-\-delta / \-\-offset
+parameters obtained by calibrating. Every time you move somewhere (of course if you have a laptop or netbook) re-calibrate to get true recognition.
+.TP
+.B \-\-average <int>
+prevents any movement in front of the camera result in a change of backlight. The higher the value, the lower the chance of wrong backlight changes but also the slower the reaction to smooth brightness changes. In case of sudden changes in brightness (turn off/on the light) the average resets and restarts from one.
+If ommitted, will be equal to 90/gap so that the average is calculated within an interval of 90 seconds.
+.TP
+.B \-\-steps <int>
+number of backlight steps of the monitor (obtained through calibration)
+.TP
+.B \-\-invert
+to be used if the backlight steps go from max to min. (eg. 0=max 9=min) (obtained through calibration)
+.TP
+.B \-\-bl-offset <int>
+to be used if the backlight steps start from a number greater than 0. If used along with 
+.I invert
+has to be the value closer to 0. (eg. 2=max 12=min, 
+.I bl\-offset
+= 2) (obtained through calibration)
+.TP
+.B \-\-cam <string>
+specify the path of the camera to use.
+.TP
+.B \-\-path <string>
+specify the path of backlight level file. To be used if you have more than a device with backlight changing support.
+.TP
+.B \-\-no\-auto
+disable automatic backlight level change.
+.TP
+.B \-\-no\-screen
+don't calculate screen's backlight brightness-compensation. Turn off to save a bit of CPU usage (~30% of total usage), auto enabled if not running under X and pyQt4 module is installed. 
+.TP
+.B \-\-no\-gui
+run as cli interactive application.
+.TP
+.B \-\-logdata
+enables 'e' key to export whole data from beginning (if not set, only values within average range are exported). Be careful when using this option, because keeps every value obtained in memory, and that can lead to high memory usage if used for whole days. On the other hand, it's a great tool for experimental/statistic activities.
+.TP
+.B \-\-logpath <string>
+specify where to save exported csv files, has to be in the format %dir/%filename or %dir/%filename.%ext
+.PP
+.SH EXAMPLES
+.TP
+.B calise \-\-calibrate
+starts calibration on a custom profile (name will be asked later) then exits
+.TP
+.B calise \-\-no\-gui \-\-verbosity 3 \-\-gap 0.1 \-\-average 500
+extreme configuration... captures, calculates and displays every ~0.1s "verbose" infos based on an 500 values average.
+ \
+NOTE: actually the gap limit is cam's max fps, so for example on my machine it can't be below 0.0625 (16fps).
+.\.TP
+.\.B calise \-\-auto \-\-acpi /sys/class/backlight/eeepc/brightness \-\-cam /dev/video4
+.\.B calise \-\-auto
+.\automatically sets the backlight on the backlight file /sys/class/backlight/eeepc/brightness using the cam /dev/video4 ("delta" and "offset" are obtained from the calibration)
+.\automatically sets the backlight
+.TP
+.B calise
+typical configuration resulting in a GUI module
+.PP
+.SH "SEE ALSO"
+calised, sample.conf
+.\.PP
+.\.SH "HTML Documentation"
+.\None
+.SH AUTHOR
+.TP
+Written by Nicolò Barbon.

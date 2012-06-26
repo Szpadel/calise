@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Calise
+Name[it]=Calise
+GenericName=System tool
+GenericName[it]=Strumento di sistema
+Comment=Use a camera as a light-sensor
+Comment[it]=Usa una videocamera come sensore di luminosità
+
+Icon=calise
+
+Type=Application
+Categories=Utility
+
+Exec=calise
+StartupNotify=true
+Terminal=false

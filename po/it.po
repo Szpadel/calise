@@ -1,0 +1,550 @@
+# Calise Italian translation.
+# Copyright (C) 2011 Nicolò Barbon
+# This file is distributed under the same license as the Calise package.
+# Nicolò Barbon <smilzoboboz@gmail.com>, 2011.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.0.7\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2011-11-27 16:16+0100\n"
+"PO-Revision-Date: 2011-11-27 16:31+0100\n"
+"Last-Translator: Nicolò Barbon <smilzoboboz@gmail.com>\n"
+"Language-Team: italian\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: calise/calibration.py:250
+msgid "yes"
+msgstr "sì"
+
+#: calise/calibration.py:250 calise/calibration.py:254
+#: calise/calibration.py:258
+msgid "y"
+msgstr "s"
+
+#: calise/calibration.py:251
+msgid "no"
+msgstr "no"
+
+#: calise/calibration.py:251 calise/calibration.py:254
+#: calise/calibration.py:256
+msgid "n"
+msgstr "n"
+
+#: calise/calibration.py:256
+msgid "Y"
+msgstr "S"
+
+#: calise/calibration.py:258
+msgid "N"
+msgstr "N"
+
+#: calise/calibration.py:270
+msgid "Please respond with 'yes' or 'no' (or 'y' or 'n')"
+msgstr "Prego rispondere con 'sì' o 'no' (o 's' o 'n')"
+
+#: calise/calibration.py:289
+msgid ""
+"This passage gets a valid profile name to be stored as config file's "
+"filename."
+msgstr ""
+"Il passaggio ottione un nome valido per il profilo che verrà usato come "
+"nomedel file di configurazione salvato"
+
+#: calise/calibration.py:296
+msgid "Enter a name for the new profile"
+msgstr "Inserisci un nome per il nuovo profilo"
+
+#: calise/calibration.py:302
+msgid "Please retry and enter a valid name."
+msgstr "Prego riprovare ed inserire un nome valido."
+
+#: calise/calibration.py:304
+msgid ""
+"Since it'll be a filename, chars not supported by your os will raise an error"
+msgstr ""
+"Poiché sarà il nome di un file, caratteri non supportati dal tuo os "
+"genereranno un errore"
+
+#: calise/calibration.py:311
+msgid "The selected profile already exists, overwrite?"
+msgstr "Il profilo scelto esiste già, sovreascrivere?"
+
+#: calise/calibration.py:330
+msgid ""
+"This passage obtains available backlight steps on this machine and displays "
+"them ordered from lower to higher backlight level."
+msgstr ""
+"Questo passaggio ottiene i passi di retroilluminazione disponibili in questa "
+"macchina e li mostra ordinati dal meno intenso al più intenso."
+
+#: calise/calibration.py:345
+msgid "Set the backlight to the minimum then press enter"
+msgstr "Imposta la retroilluminazione al minimo e premi invio"
+
+#: calise/calibration.py:360
+#, python-format
+msgid "backlight steps: %s"
+msgstr "passi di retroilluminazione: %s"
+
+#: calise/calibration.py:373
+msgid ""
+"This passage lists all available cameras on this machine and, if more than "
+"one, asks wich camera has to be used."
+msgstr ""
+"Questo passaggio elenca tutte le videocamere disponibili nella macchina e, "
+"se più di una, chiede quale deve essere usata."
+
+#: calise/calibration.py:400
+#, python-format
+msgid "Choose one of cams listed above (None=%s): "
+msgstr "Scegli una delle videocamere elencate  sopra (Nulla=%s)"
+
+#: calise/calibration.py:412
+#, python-format
+msgid "Please retry and enter an integer in the valid range 1-%d!"
+msgstr "Prego riprovare ed inserisci un intero nell'intervallo 1-%d!"
+
+#: calise/calibration.py:416
+msgid "Please retry and enter an integer!"
+msgstr "Prego riprovare ed inserire un intero!"
+
+#: calise/calibration.py:424
+#, python-format
+msgid "camera: %s (%s)"
+msgstr "videocamera: %s (%s)"
+
+#: calise/calibration.py:428
+#, python-format
+msgid "camera: %s"
+msgstr "videocamera: %s"
+
+#: calise/calibration.py:439
+msgid ""
+"This passage lets the program be aware of the lower lightness that can be "
+"registered by the camera to contrast its white balance feature."
+msgstr ""
+"Questo passaggio fa si che il programma venga a conoscenza della minimo "
+"livello di luminosità che la videocamera registra, per contrastarne la "
+"caratteristica di bilanciamento del bianco"
+
+#: calise/calibration.py:450
+msgid "Cover the webcam and then press enter"
+msgstr "Copri la videocamera e premi enter"
+
+#: calise/calibration.py:452 calise/calibration.py:486
+msgid "Now calibrating"
+msgstr "Calibrazione in corso"
+
+#: calise/calibration.py:453
+msgid "do not uncover the webcam"
+msgstr "non scoprire la videocamera"
+
+#: calise/calibration.py:479
+msgid ""
+"On this passage the program takes some shots of current ambient lightness "
+"being used later on the last passage. Please be natural and avoid moving too "
+"much for few seconds (poorly speaking, you're on camera)."
+msgstr ""
+"In questo passaggio il programma effettua varie catture della luminosità "
+"ambientale corrente che verranno usate in seguito nell'ultimo passaggio. Per "
+"favore siate naturali e evitate di muovervi troppo per qualche secondo (in "
+"parole povere, siete in onda)."
+
+#: calise/calibration.py:485
+msgid "Uncover the camera and press enter when ready to start"
+msgstr "Scopri la videocamera e premi invio quando sei pronto per cominciare"
+
+#: calise/calibration.py:494
+msgid "Capture thread started."
+msgstr "Thread di cattura avviato."
+
+#: calise/calibration.py:499
+msgid ""
+"Choose a value for the current ambient brightness, consider that the more "
+"brightness there is, the more precise will the scale of the program be, "
+"supported values are backlight steps or percents (eg. 5 or 56%): "
+msgstr ""
+"Ora scegli un valore per la luminosità ambientale corrente, considera che "
+"più è alta la luminostità, più sarà precisa la scala del programma, sono "
+"validi sia valori in percentuale che step di retroilluminazione (es. 5 o "
+"56%): "
+
+#: calise/calibration.py:516
+#, python-format
+msgid ""
+"Choosen percentage value roughly equals to the %dth backlight step, would "
+"you like to use that value?"
+msgstr ""
+"La percentuale scelta equivale grossomodo al %d° passo di "
+"retroilluminazione, desideri mantenere questo valore?"
+
+#: calise/calibration.py:533
+#, python-format
+msgid ""
+"Choosen backlight step value roughly equals to %.2f%% of ambient brightness, "
+"would you like to use that value?"
+msgstr ""
+"Il passo di retroilluminazione scelto equivale grossomodo al %d%% di "
+"luminosità ambientale, desideri mantenere questo valore?"
+
+#: calise/calibration.py:541 calise/calibration.py:547
+msgid "Please retry and enter a value according to the rules above"
+msgstr ""
+"Per favore riprovare ed inserire un valore secondo le direttive di cui sopra"
+
+#: calise/calibration.py:558
+#, python-format
+msgid ""
+"percentage: %.2f%% and backlight step: %d for current ambient brightness"
+msgstr ""
+"percentuale: %d%% e passo di retroilluminazione: %d per la luminosità "
+"ambientale corrente"
+
+#: calise/calibration.py:564
+msgid "Making a config file with the choosen settings..."
+msgstr "Creazione di un file di configurazione con le impostazioni scelte..."
+
+#: calise/calibration.py:591
+#, python-format
+msgid "config file saved as: %s"
+msgstr "file di configurazione salvato come: %s"
+
+#: calise/calibration.py:596
+#, python-format
+msgid "To use the new profile add '--profile %s' to the switches"
+msgstr "Per usare il nuovo profilo aggiungere '--profile %s' alle opzioni cli"
+
+#: calise/ExecThreads.py:125
+#, python-format
+msgid "Unable to export to \"%s\""
+msgstr "Impossibile esportare in \"%s\""
+
+#: calise/ExecThreads.py:210
+msgid "None"
+msgstr "Nessuno"
+
+#: calise/options.py:32
+#, python-format
+msgid ""
+"Calculates ambient brightness and suggests (or sets) the screen's correct "
+"backlight using a webcam.\n"
+"For usage instructions type \"%(prog)s --help\"."
+msgstr ""
+"Calcola la luminosità ambientale e imposta il livello corretto di "
+"retroilluminazione dello schermo, usando una videocamera.\n"
+"Per istruzioni sull'utilizzo digitare \"%(prog)s --help\"."
+
+#: calise/options.py:43
+msgid "verbosity level from 2 to 3"
+msgstr "livello di verbosità da 2 a 3"
+
+#: calise/options.py:49
+msgid "displays current version and exits"
+msgstr "mostra la versione ed esce"
+
+#: calise/options.py:56
+msgid "launches the calibration"
+msgstr "avvia la calibrazione"
+
+#: calise/options.py:63
+msgid "cam to be used as capture device"
+msgstr "videocamera da usare come dispositivo di cattura"
+
+#: calise/options.py:71
+msgid "sleep time between framecaptures, in seconds"
+msgstr "tempo di attesa fra catture, in secondi"
+
+#: calise/options.py:79
+msgid "equation's delta"
+msgstr "delta dell'equazione"
+
+#: calise/options.py:87
+#, python-format
+msgid "offset of the 0%% value of ambient brightness"
+msgstr "offset del valore 0%% della luminosità ambientale"
+
+#: calise/options.py:95
+msgid "number of elements to average before changing backlight"
+msgstr ""
+"numero di elementi da mediare prima di cambiare livello di retroilluminazione"
+
+#: calise/options.py:103
+msgid "number of backlight level steps (default: 10)"
+msgstr "numero di passi di retroilluminazione (default: 10)"
+
+#: calise/options.py:111
+msgid "choose if you have the backlight scale inverted (eg. 9 min - 0 max)"
+msgstr ""
+"da abilitare se si ha la scala della retroilluminazione invertita (es. 9 min "
+"- 0 max)"
+
+#: calise/options.py:122
+msgid ""
+"set if your backlight steps start from an arbitrary number (eg. 2 min - 12 "
+"max instead of 0 min - 9 max)"
+msgstr ""
+"impostare se il conteggio dei passi di retroilluminazione parte da un numero "
+"arbitrario (es. 2 min - 12 max invece che 0 min - 9 max)"
+
+#: calise/options.py:131
+msgid "disable automatic backlight level change"
+msgstr "disabilita il cambiamento automatico del livello di retroilluminazione"
+
+#: calise/options.py:138
+msgid "turns off screen's ambient brightness correction"
+msgstr ""
+"disabilita la correzione del valore ambientale con quello ottenuto da "
+"catture a schermo"
+
+#: calise/options.py:144
+msgid "uses the specified profile"
+msgstr "usa il profilo specificato"
+
+#: calise/options.py:151
+msgid "location of the brightness backlight file"
+msgstr "posizione del file brightness della retroilluminazione"
+
+#: calise/options.py:159
+msgid ""
+"Enables \"e\" key to export whole data from beginning, to calise.csv (if not "
+"set, only values within average range are exported). Be careful when using "
+"this option, because keeps every value obtained in memory, and that can lead "
+"to high memory usage if used for whole days. On the other hand, it's a great "
+"tool for experimental/statistic activities."
+msgstr ""
+
+#: calise/options.py:172
+msgid "logdata save path (eg. /tmp/calise.csv)"
+msgstr "percorso di salvataggio per logdata (es. /tmp/calise.csv)"
+
+#: calise/options.py:179
+msgid "Disables the graphical user interface"
+msgstr "Disabilita l'interfaccia grafica"
+
+#: calise/QtGui.py:80
+msgid "Pause execution and unload the camera"
+msgstr ""
+"Mette in pausa l'esecuzione e rende\n"
+"disponibile la videocamera"
+
+#: calise/QtGui.py:83
+msgid ""
+"Start/Stop recording session\n"
+"each session is appended to previous one"
+msgstr ""
+"Avvia/Termina la registrazione\n"
+"ogni sessione viene aggiunta alla precedente"
+
+#: calise/QtGui.py:87
+msgid "Export recorded data"
+msgstr "Esporta le informazioni registrate"
+
+#: calise/QtGui.py:90
+msgid "Display detailed informations"
+msgstr "Mostra informazioni dettagliate"
+
+#: calise/QtGui.py:93
+msgid ""
+"Interactive backlight scale\n"
+"click to pause execution and set backlight step\n"
+"corresponding to click position"
+msgstr ""
+"Scala di retroilluminazione interattiva\n"
+"clicca per mettere in pausa l'esecuzione ed\n"
+"impostare la retroilluminazione al livello\n"
+"corrispondente"
+
+#: calise/QtGui.py:226
+msgid "About Calise"
+msgstr "Informazioni su Calise"
+
+#: calise/QtGui.py:229 calise/QtGui.py:430
+msgid "About Qt"
+msgstr "Informazioni su Qt"
+
+#: calise/QtGui.py:232 calise/QtGui.py:248
+msgid "Exit"
+msgstr "Esci"
+
+#: calise/QtGui.py:233
+msgid "TrayIcon"
+msgstr "Icona nel vassoio"
+
+#: calise/QtGui.py:234
+msgid "Close to tray"
+msgstr "Chiudi nel vassoio"
+
+#: calise/QtGui.py:235
+msgid "Default"
+msgstr "Predefinito"
+
+#: calise/QtGui.py:236
+msgid "Extended"
+msgstr "Esteso"
+
+#: calise/QtGui.py:237
+msgid "Full"
+msgstr "Completo"
+
+#: calise/QtGui.py:239
+msgid "Main menu"
+msgstr "Menu principale"
+
+#: calise/QtGui.py:241
+msgid "Show window"
+msgstr "Mostra finestra"
+
+#: calise/QtGui.py:245
+msgid "About"
+msgstr "Informazioni"
+
+#: calise/QtGui.py:287
+msgid "&File"
+msgstr "&File"
+
+#: calise/QtGui.py:289
+msgid "&View"
+msgstr "&Visualizza"
+
+#: calise/QtGui.py:297
+msgid "&Help"
+msgstr "&Aiuto"
+
+#: calise/QtGui.py:318 calise/QtGui.py:426
+msgid "Camera active"
+msgstr "Videocamera attiva"
+
+#: calise/QtGui.py:421
+msgid "Camera inactive"
+msgstr "Videocamera inattiva"
+
+#: calise/QtGui.py:435
+#, python-format
+msgid "About %s"
+msgstr "Informazioni su %s"
+
+#: calise/QtGui.py:437
+#, python-format
+msgid ""
+"<h3><b>Calise %s</b></h3><br />Calise (<b>Ca</b>mera <b>Li</b>ght <b>Se</"
+"b>nsor) takes frames from a camera, calculates ambient brightness and sets "
+"screen's correct backlight level according to a user-specified scale "
+"(obtained through automatic calibration.<br /><br />Copyright &#169;   "
+"2011   Nicol&ograve; Barbon<br /><br /><a href=\"http://sourceforge.net/"
+"projects/calise/\">http://sourceforge.net/projects/calise/</a><br /><br /"
+">Calise is free software: you can redistribute it and/or modify it under the "
+"terms of the GNU General Public License as published by the Free Software "
+"Foundation, either version 3 of the License, or any later version.<br />You "
+"should have received a copy of the GNU General Public License along with "
+"Calise.<br />If not, see <a href=\"http://www.gnu.org/licenses/\">http://www."
+"gnu.org/licenses/</a>.<br /><br /><b>Thanks to:</b><br /> - P&#225;draig "
+"Brady for his brief guide to gettext translation<br /> - Trent Mick for "
+"query_yes_no() function<br /> - Danny Yoo for _Getch* classes<br /> - <a "
+"href=\"http://zetcode.com/\">ZetCode</a> for the great tutorials<br/> - The "
+"GNOME team for the scheme of the big icon (from cheese)"
+msgstr ""
+"<h3><b>Calise %s</b></h3><br />Calise (<b>Ca</b>mera <b>Li</b>ght <b>Se</"
+"b>nsor) ottiene fotogrammi da una videocamera, calcola la luminosità "
+"ambientale e imposta la retroilluminazione dello schermo secondo una scala "
+"scelta dall'utente (ottenuta attraverso una calibrazione automatica)."
+"<br /><br />Copyright &#169;   "
+"2011   Nicol&ograve; Barbon<br /><br /><a href=\"http://sourceforge.net/"
+"projects/calise/\">http://sourceforge.net/projects/calise/</a><br /><br /"
+">Calise is free software: you can redistribute it and/or modify it under the "
+"terms of the GNU General Public License as published by the Free Software "
+"Foundation, either version 3 of the License, or any later version.<br />You "
+"should have received a copy of the GNU General Public License along with "
+"Calise.<br />If not, see <a href=\"http://www.gnu.org/licenses/\">http://www."
+"gnu.org/licenses/</a>.<br /><br /><b>Ringraziamenti:</b><br /> - "
+"P&#225;draig Brady per la sua breve guida alla traduzione con gettext<br /> "
+"- Trent Mick per la funzione query_yes_no()<br /> - Danny Yoo per le classi "
+"_Getch*<br /> - <a href=\"http://zetcode.com/\">ZetCode</a> per i fantastici "
+"tutorial<br/> - Il team GNOME per lo schema dell'icona grande (da cheese)"
+
+#: calise/widgets.py:154
+msgid "Ambient brightness"
+msgstr "Luminosità ambientale"
+
+#: calise/widgets.py:158
+msgid "Screen brightness"
+msgstr "Luminosità schermo"
+
+#: calise/widgets.py:162
+msgid "Brightness correction"
+msgstr "Correzione luminosità"
+
+#: calise/widgets.py:166
+msgid "Brightness percentage"
+msgstr "Percentuale luminosità"
+
+#: calise/widgets.py:175
+msgid "Average percentage"
+msgstr "Percentuale media"
+
+#: calise/widgets.py:179
+msgid "Averaged values"
+msgstr "Valori mediati"
+
+#: calise/widgets.py:183
+msgid "Current backlight"
+msgstr "Passo corrente"
+
+#: calise/widgets.py:187
+msgid "Suggested backlight"
+msgstr "Passo suggerito"
+
+#: calise/widgets.py:191
+msgid "Lock Expiry"
+msgstr "Termine blocco"
+
+#: calise/widgets.py:195
+msgid "Capture Data"
+msgstr "Dati cattura"
+
+#: calise/widgets.py:197
+msgid "Averaging Data"
+msgstr "Dati media"
+
+#~ msgid ""
+#~ "Double Click: show/hide main window\n"
+#~ "Right Click: open contextual menu"
+#~ msgstr ""
+#~ "Doppio Click: mostra/nascondi la finestra\n"
+#~ "Click Destro: apri menu contestuale"
+
+#~ msgid ""
+#~ "Camera settings were found in an existing profile, 2nd and 3rd steps' "
+#~ "data will be taken from there."
+#~ msgstr ""
+#~ "Impostazioni della videocamera sono state trovate in un profilo "
+#~ "esistente, i dati per i passaggi 2 e 3 verranno presi da lì."
+
+#~ msgid "Press enter when ready to start"
+#~ msgstr "Premi invio quando sei pronto per cominciare"
+
+#~ msgid ""
+#~ "This passage asks to choose an arbitrary value for the raw lightness "
+#~ "obtained on previous passage."
+#~ msgstr ""
+#~ "Questo passaggio chiede di scegliere un valore arbitrario per la "
+#~ "luminosità grezza ottenuta nel passaggio precedente."
+
+#~ msgid "Using \"%s\" profile\n"
+#~ msgstr "In uso il profilo \"%s\"\n"
+
+#~ msgid "Backlight steps"
+#~ msgstr "Passi di retroilluminazione"
+
+#~ msgid "Delta and offset"
+#~ msgstr "Delta e offset"
+
+#~ msgid "Time gap"
+#~ msgstr "Frequenza"
+
+#~ msgid "Number of values to average"
+#~ msgstr "Numero di valori da mediare"

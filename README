@@ -1,0 +1,55 @@
+Calise 0.3.0 (beta)
+
+Calise (Camera Light Sensor) is a lightweight program that uses any system readable camera as a light sensor: obtains ambient brightness and calculates correct backlight setting according to user defined scale.
+For simple usage instructions type "calise --help" or "calised --help" and for a detailed explanation please refer to man page.
+
+Copyright (C)   2011-2012   Nicolo' Barbon
+Calise is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
+Calise is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+You should have received a copy of the GNU General Public License along with Calise.  If not, see <http://www.gnu.org/licenses/>.
+
+
+What's calise?
+Calise is a program written in python (and partly in C) that reads frames from a camera, computes ambient brightness value and sets backlight accordingly.
+Main program (executable "calise") grabs the camera for the whole execution and grantes really high fidelity computations, BUT should not be used in background - like a daemon for example - because, despite cpu time usage is low ~1%, it causes too much wakeups.
+On the other hand from version 0.1.0 there's also a "service" version (executable "calised") that, with the help of dawn/sunset times and weather informations optimizes captures as described below (and of course service's cpu time usage and power consumption are actually negligible):
+    dawn/sunset: more or less from 1 to 7 captures per minute (according to latitude)
+    daytime: from 60 to 12 captures per hour (according to weather informations taken once per hour, if no internet or weather info disaled 20)
+    night: no captures
+Anyway "service" version has also the capability of "manual" captures if the value returned by automatic execution is not good enough.
+Take a look to man pages of both programs to get further informations.
+
+
+Setup Instructions and dependencies:
+Please refer to INSTALL file from this same directory
+
+
+Notes:
+On the first run the program will start calibration to compile the default profile (so for that first time you have to run on terminal), then you can add other profiles giving the switch --calibrate to the program.
+There has to be at least one "default" profile in the config dir, if not, the program will calibrate to get one.
+To use a custom profile (not default), give the --profile "name" switch to the program.
+Once a profile is created, you can modify it adding (but not removing) options. Take a look at config/sample.conf for all available options, btw the ones provided through calibration should suffice
+Despite calise is aware of calised (Service) execution (and won't start), calised (Service) is not, so if you first run calise and then calised, they'll overlap (with unknown consequences...)
+
+
+Translations:
+Currently there are only english and italian translation, but anyone is encouraged to make his/her own language translation.
+"Service" version is currently not translated at all.
+
+
+Linux users:
+I personally have been able to test the program only on few machines. Funny enough every machine had the same 0 < 9 backlight scale so, as for now, other scale settings remain officially untested (of course I've done some debug, everything should be ok).
+For python modules, you'll have no problems obtaining them, no matter what distribution are you running.
+
+  Tested on:
+    Kernel 2.6.35 (i686), 2.6.38 - 3.2.6 (i686)
+    Python 2.7.1 - 2.7.2
+    PyGame 1.9.1
+    PIL 1.1.7
+    NumPy 1.5.1 - 1.6.1
+    PyQt 4.8.4 - 4.9.1
+    PyEphem 3.7.5.1
+
+
+Windows users:
+Windows support is not a priority for now, but it's not as far as Mac support to be started; so keep an eye on that or switch to GNU/Linux that's way better...

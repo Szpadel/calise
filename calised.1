@@ -1,0 +1,138 @@
+.TH calise-daemon 1 "February 22 2012" "Nicolò Barbon"
+.SH NAME
+Calise \- Camera Light Sensor Project
+.SH SYNOPSIS
+.B calised
+.BR [SWITCH]
+.PP
+.SH DESCRIPTION
+Calise is a python program that uses any system supported camera as a light
+sensor. The program calculates ambient brightness and suggests (or sets) the
+screen's correct backlight using a webcam.
+
+Daemon version is optimized for long-time usage and its power/cpu time usage
+is negligible.
+
+.PP
+.SH GLOBAL OPTIONS
+.TP
+Options available either with daemon started or starting the daemon.
+.TP
+.B \-h, \-\-help
+Print a help screen and exit.
+.TP
+.B \-\-version
+Print program name and version and exit.
+.TP
+.TP
+.B \-\-no-weather/\-\-weather
+Enable/disable weather optimization. Is set to True by default.
+
+Wheather optimization feature grabs, through several APIs, weather conditions
+of profile-specified latitude/longitude from internet and sets a daytime
+multiplier accordingly, for example, if weather is 'cloudy', multiplier will
+be ~0.23, else if weather is 'clear' it will be 1.00.
+.TP
+.B \-\-location <lat>:<lon>
+Set current location. <lat> (latitude) and <lon> (longitude) have to be
+expressed as float degrees.
+
+Geolocation allows the daemon to optimize captures according to current
+condition of the sun: dawn, day, sunset, night. During dawns and sunsets (from
+15° to 0° above the horizon), since ambient brightness increases/decreases
+rapidly, captures are done often; during the day (more than 15° above the
+hotizon) captures are set according to weather conditions or, if not able to
+obtain those, to 3min; by night (less than 0° above the horizon) the daemon
+puts itself in idle state till next dawn.
+.TP
+.B \-\-capture-number <int>
+.TP
+.B \-\-capture-interval <float>
+Number and interval (in seconds) of captures per "capture-session".
+
+The daemon executes once every X seconds (value obtained with the help of
+geolocation coordinates), and on every execution, takes some captures on a
+specified interval. These options control the number and the time interval of
+the captures.
+.TP
+.B \-\-loglevel <level>
+Set log <level> to either "critical", "error", "warning", "info" (default),
+"debug". This setting does not affect the log level of the logfile wich is set
+to be as verbose as possible (debug).
+.TP
+.B \-\-logfile <path>
+Specify a valid path to a file where to save application log. If not specified,
+the log is stored in calise's temporary directory and removed with that
+directory on exit.
+.PP
+.SH START ONLY OPTIONS
+.TP
+options available only when starting the daemon.
+.TP
+.B \-p, \-\-profile <name>|<path>
+Read given profile name (to be found in calise xdg-config directory) or a
+valid path. Default is profile named "default" in calise xdg-config directory.
+.TP
+.B \-\-port <port>
+Set daemon's listening port (internal).
+.PP
+.SH EXECUTION OPTIONS
+.TP
+These options are available only if the daemon is already running (and won't \
+start/stop the daemon).
+.TP
+.B \-k, \-\-stop
+Terminate the daemon.
+.TP
+.B \-e, \-\-pause
+Pause capture thread.
+.TP
+.B \-r, \-\-resume
+Resume capture thread (from a "pause" state).
+.TP
+.B \-\-restart
+Restart the capture thread (not really useful).
+.TP
+.B \-c, \-\-capture
+Calculate and automatically set backlight step. The daemon can be either
+running (and if so, after the capture, is resumed) or paused.
+.TP
+.B \-d, \-\-dump
+Display last capture data.
+.TP
+.B \-a, \-\-dump\-all
+Display all captures data.
+.TP
+.B \-\-dump\-settings
+Display current execution's settings.
+.PP
+.SH EXAMPLES
+.TP
+.B calised
+Start the daemon with default profile.
+.TP
+.B calised \-\-profile foobar \-\-no\-weather \-\-loglevel warning
+Start the daemon with profile foobar, without weather optimization feature and
+with log level set to WARNING.
+.TP
+.B calised \-\-stop
+(if the daemon is running) Terminate a running daemon.
+.TP
+.B calised \-c
+(if the daemon is running) Do a capture and set the backlight accordingly.
+.TP
+.B calised \-\-dump\-all \-\-dump\-settings \-c
+(if the daemon is running) Do a capture and display both all captures's data
+and current settings.
+.TP
+.B calised \-\-dump
+(if the daemon is running) Display last capture data.
+.PP
+.SH "SEE ALSO"
+calise, sample.conf
+.\.PP
+.\.SH "HTML Documentation"
+.\None
+.SH AUTHOR
+.TP
+Written by Nicolò Barbon.
