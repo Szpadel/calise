@@ -50,13 +50,16 @@ def getSun(latitude, longitude, curTime=None):
         curTime = time.time()
     obs = ephem.Observer()
     obs.lat = str(latitude)
-    obs.long = str(longitude)
+    obs.lon = str(longitude)
     sun = ephem.Sun()
     dst = getDst(curTime)
     # pyEphem works on utc time. This requires a forth conversion since every
     # epoch obtained will be shifted by %timezone%
     obs.date = datetime.date.fromtimestamp(curTime)
     try:
+        # considering civil twilight as rise/set time
+        obs.horizon = '-6'
+        # civil rise and set times setting and epoch conversion
         rise_time = obs.next_rising(sun).datetime()
         rise_epoch = int(rise_time.strftime('%s')) - time.timezone - dst
         set_time = obs.next_setting(sun).datetime()

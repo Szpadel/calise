@@ -102,9 +102,13 @@ def searchExisting(camera=None, bfile=None, coordinates=None):
                 if config.get('Backlight', 'path') == bfile:
                     ret = path
             elif (
-                coordinates and
+                coordinates and (
                 config.has_option('Daemon', 'latitude') and
-                config.has_option('Daemon', 'longitude')):
+                config.has_option('Daemon', 'longitude')
+                ) or (
+                config.has_option('Service', 'latitude') and
+                config.has_option('Service', 'longitude')
+                )):
                 ret = path
         if ret:
             break
@@ -312,7 +316,7 @@ class CliCalibration():
         print("Step 4 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
         print(_(
             "This passage asks for latitude and longitude; these are needed "
-            "for daemon execution. The daemon has a lot of spatio-temporal "
+            "for service execution. The service has a lot of spatio-temporal "
             "optimization to reduce power and cpu usage, based on these "
             "coordinates (thanks to the grat \"ephem\" module)."))
         lat, lon = self.geoLocate()
@@ -474,8 +478,12 @@ class CliCalibration():
         if geoConf:
             config = ConfigParser.RawConfigParser()
             config.read(geoConf)
-            lat = config.getfloat("Daemon", "latitude")
-            lon = config.getfloat("Daemon", "longitude")
+            if config.has_option('Daemon', 'latitude'):
+                lat = config.getfloat('Daemon', 'latitude')
+                lon = config.getfloat('Daemon', 'longitude')
+            elif config.has_option('Service', 'latitude'):
+                lat = config.getfloat('Service', 'latitude')
+                lon = config.getfloat('Service', 'longitude')
             dummy = query_yes_no(_(
                 "\nThe program has found these coordinates (%s, %s) in an "
                 "existing profile, would you like to use these values also "
@@ -689,9 +697,9 @@ class CliCalibration():
         config.set('Backlight', 'steps', str(self.steps))
         config.set('Backlight', 'offset', str(self.bkofs))
         config.set('Backlight', 'invert', str(self.invert))
-        config.add_section('Daemon')
-        config.set('Daemon', 'latitude', self.lat)
-        config.set('Daemon', 'longitude', self.lon)
+        config.add_section('Service')
+        config.set('Service', 'latitude', self.lat)
+        config.set('Service', 'longitude', self.lon)
         config.add_section('Udev')
         config.set('Udev', 'kernel', self.udevice['KERNEL'])
         config.set('Udev', 'device', self.udevice['DEVICE'])

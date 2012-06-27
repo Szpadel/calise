@@ -108,61 +108,57 @@ class daemon_argumenter():
     def init_args(self):
         parser = argparse.ArgumentParser(
             description=(
-                "Daemon to change screen's backlight according to ambient "
-                "brightness through webcam"),
+                "A service that change screen's backlight according to "
+                "ambient brightness through any webcam"),
             prog="calised")
         parser.add_argument(
             '--version',
             action='version',
             version='%(pro)s %(ver)s' % dict(pro='%(prog)s', ver=__version__),
             help="Display current version")
-        # Daemon execution
+        # Service execution
         parser.add_argument(
             '-k', '--stop',
             action='store_true', default=None, dest='kill',
-            help="Terminate daemon")
+            help="Terminate service")
         parser.add_argument(
             '--restart',
             action='store_true', default=None, dest='restart',
-            help="Restart daemon")
+            help="Restart service")
         parser.add_argument(
             '-e', '--pause',
             action='store_true', default=None, dest='pause',
-            help="Pause daemon")
+            help="Pause service")
         parser.add_argument(
             '-r', '--resume',
             action='store_true', default=None, dest='resume',
-            help="Terminate daemon execution")
+            help="Terminate service execution")
         parser.add_argument(
             '-c', '--capture',
             action='store_true', default=None, dest='capture',
-            help="Terminate daemon execution")
+            help="Do a capture")
         parser.add_argument(
             '--check',
             action='store_true', default=None, dest='check',
-            help="Checks whenever daemon is running or not")
+            help="Checks whenever service is running or not")
         # Variable set
         parser.add_argument(
             '-p', '--profile',
             metavar='<profile>', dest='pname', default='default',
             help="Specify either a valid profile name or path")
         parser.add_argument(
-            '--port',
-            metavar='<port>', dest='dport', default=None,
-            help="Daemon port number used to communicate")
-        parser.add_argument(
             '--location',
             metavar='<lat>:<lon>', dest='position', default=None,
-            help="Geographical position expressed as float degrees")
+            help="Set geographical position expressed as float degrees")
         parser.add_argument(
             '--capture-number',
             metavar='<int>', dest='capnum', default=None,
-            help="Number of captures per \"capture session\" (default: 7)")
+            help="Set number of captures per \"capture session\" (default: 7)")
         parser.add_argument(
             '--capture-interval',
             metavar='<float>', dest='capint', default=None,
             help=(
-                "Seconds between consecutive captures in a \"capture "
+                "Set seconds between consecutive captures in a \"capture "
                 "session\" (default: 0.5)"))
         parser.add_argument(
             '--weather',
@@ -176,11 +172,13 @@ class daemon_argumenter():
         parser.add_argument(
             '--loglevel',
             metavar='<level>', dest='loglevel', default=None,
-            help="Log level: error, warning (default), info or debug")
+            help="Log level: error, warning, info (default) or debug")
         parser.add_argument(
             '--logfile',
             metavar='<path>', dest='logfile', default=None,
-            help="Log output file (None if not specified)")
+            help=(
+                "Log output file (tempfile inside calise tempdir if not "
+                "specified)"))
         parser.add_argument(
             '-d', '--dump',
             action='store_true', default=None, dest='dump',
@@ -199,10 +197,10 @@ class daemon_argumenter():
     def parse_settings(self):
         global settings
         args = self.arguments
-        # NOTE: Daemon execution related arguments won't be processed there
-        #       since daemon communication is done through command existence
+        # NOTE: Service execution related arguments won't be processed there
+        #       since service communication is done through command existence
         #       in args variable (actual command content isn't processed).
-        #       At the end of this function all daemon commands with value
+        #       At the end of this function all service commands with value
         #       None are stripped so that only given commands remain.
         #
         #       eg. args = {'kill': 0, 'dump': "zaczac"} -> kill, dump
@@ -259,6 +257,13 @@ class profiler():
             'invert': (bool, 'invert'),
             'path': (str, 'path'),
         },
+        'Service': {
+            'latitude': (float, 'latitude'),
+            'longitude': (float, 'longitude'),
+            'capnum': (int, 'capnum'),
+            'capint': (float, 'capint'),
+            'weather': (bool, 'weather'),
+            },
         'Daemon': {
             'latitude': (float, 'latitude'),
             'longitude': (float, 'longitude'),

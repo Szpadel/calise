@@ -1,4 +1,4 @@
-.TH calise-daemon 1 "February 22 2012" "Nicolò Barbon"
+.TH calise-service 1 "February 22 2012" "Nicolò Barbon"
 .SH NAME
 Calise \- Camera Light Sensor Project
 .SH SYNOPSIS
@@ -10,13 +10,13 @@ Calise is a python program that uses any system supported camera as a light
 sensor. The program calculates ambient brightness and suggests (or sets) the
 screen's correct backlight using a webcam.
 
-Daemon version is optimized for long-time usage and its power/cpu time usage
+Service version is optimized for long-time usage and its power/cpu time usage
 is negligible.
 
 .PP
 .SH GLOBAL OPTIONS
 .TP
-Options available either with daemon started or starting the daemon.
+Options available either with service started or starting the service.
 .TP
 .B \-h, \-\-help
 Print a help screen and exit.
@@ -37,23 +37,23 @@ be ~0.23, else if weather is 'clear' it will be 1.00.
 Set current location. <lat> (latitude) and <lon> (longitude) have to be
 expressed as float degrees.
 
-Geolocation allows the daemon to optimize captures according to current
+Geolocation allows the service to optimize captures according to current
 condition of the sun: dawn, day, sunset, night. During dawns and sunsets (from
-15° to 0° above the horizon), since ambient brightness increases/decreases
+15° to -6° above the horizon), since ambient brightness increases/decreases
 rapidly, captures are done often; during the day (more than 15° above the
 hotizon) captures are set according to weather conditions or, if not able to
-obtain those, to 3min; by night (less than 0° above the horizon) the daemon
+obtain those, to 3min; by night (less than -6° above the horizon) the service
 puts itself in idle state till next dawn.
 .TP
 .B \-\-capture-number <int>
 .TP
 .B \-\-capture-interval <float>
-Number and interval (in seconds) of captures per "capture-session".
+Set number and interval (in seconds) of captures per "capture-session".
 
-The daemon executes once every X seconds (value obtained with the help of
-geolocation coordinates), and on every execution, takes some captures on a
-specified interval. These options control the number and the time interval of
-the captures.
+The service executes once every X seconds (value obtained with the help
+of geolocation coordinates), and on every execution, takes some captures
+on a specified interval. These options control the number and the time interval
+of the captures.
 .TP
 .B \-\-loglevel <level>
 Set log <level> to either "critical", "error", "warning", "info" (default),
@@ -67,22 +67,19 @@ directory on exit.
 .PP
 .SH START ONLY OPTIONS
 .TP
-options available only when starting the daemon.
+options available only when starting the service.
 .TP
 .B \-p, \-\-profile <name>|<path>
 Read given profile name (to be found in calise xdg-config directory) or a
 valid path. Default is profile named "default" in calise xdg-config directory.
-.TP
-.B \-\-port <port>
-Set daemon's listening port (internal).
 .PP
 .SH EXECUTION OPTIONS
 .TP
-These options are available only if the daemon is already running (and won't \
-start/stop the daemon).
+These options are available only if the service is already running (and won't \
+start/stop the service).
 .TP
 .B \-k, \-\-stop
-Terminate the daemon.
+Terminate the service.
 .TP
 .B \-e, \-\-pause
 Pause capture thread.
@@ -94,7 +91,7 @@ Resume capture thread (from a "pause" state).
 Restart the capture thread (not really useful).
 .TP
 .B \-c, \-\-capture
-Calculate and automatically set backlight step. The daemon can be either
+Calculate and automatically set backlight step. The service can be either
 running (and if so, after the capture, is resumed) or paused.
 .TP
 .B \-d, \-\-dump
@@ -109,24 +106,24 @@ Display current execution's settings.
 .SH EXAMPLES
 .TP
 .B calised
-Start the daemon with default profile.
+Start the service with default profile.
 .TP
 .B calised \-\-profile foobar \-\-no\-weather \-\-loglevel warning
-Start the daemon with profile foobar, without weather optimization feature and
+Start the service with profile foobar, without weather optimization feature and
 with log level set to WARNING.
 .TP
 .B calised \-\-stop
-(if the daemon is running) Terminate a running daemon.
+(if the service is running) Terminate a running service.
 .TP
 .B calised \-c
-(if the daemon is running) Do a capture and set the backlight accordingly.
+(if the service is running) Do a capture and set the backlight accordingly.
 .TP
 .B calised \-\-dump\-all \-\-dump\-settings \-c
-(if the daemon is running) Do a capture and display both all captures's data
+(if the service is running) Do a capture and display both all captures's data
 and current settings.
 .TP
 .B calised \-\-dump
-(if the daemon is running) Display last capture data.
+(if the service is running) Display last capture data.
 .PP
 .SH "SEE ALSO"
 calise, sample.conf
