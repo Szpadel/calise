@@ -115,69 +115,69 @@ class daemon_argumenter():
             '--version',
             action='version',
             version='%(pro)s %(ver)s' % dict(pro='%(prog)s', ver=__version__),
-            help="Display current version")
+            help="display current version")
         # Service execution
         parser.add_argument(
             '-k', '--stop',
             action='store_true', default=None, dest='kill',
-            help="Terminate service")
+            help="terminate service")
         parser.add_argument(
             '--restart',
             action='store_true', default=None, dest='restart',
-            help="Restart service")
+            help="restart service")
         parser.add_argument(
             '-e', '--pause',
             action='store_true', default=None, dest='pause',
-            help="Pause service")
+            help="pause service")
         parser.add_argument(
             '-r', '--resume',
             action='store_true', default=None, dest='resume',
-            help="Terminate service execution")
+            help="resume service from \"pause\" state")
         parser.add_argument(
             '-c', '--capture',
             action='store_true', default=None, dest='capture',
-            help="Do a capture")
+            help="do a capture and set backlight accordingly")
         parser.add_argument(
             '--check',
             action='store_true', default=None, dest='check',
-            help="Checks whenever service is running or not")
+            help="check whether service is running or not")
         # Variable set
         parser.add_argument(
             '-p', '--profile',
             metavar='<profile>', dest='pname', default='default',
-            help="Specify either a valid profile name or path")
+            help="specify either a valid profile name or path")
         parser.add_argument(
             '--location',
             metavar='<lat>:<lon>', dest='position', default=None,
-            help="Set geographical position expressed as float degrees")
+            help="set geographical position expressed as float degrees")
         parser.add_argument(
             '--capture-number',
             metavar='<int>', dest='capnum', default=None,
-            help="Set number of captures per \"capture session\" (default: 7)")
+            help="set number of captures per \"capture session\" (default: 7)")
         parser.add_argument(
             '--capture-interval',
             metavar='<float>', dest='capint', default=None,
             help=(
-                "Set seconds between consecutive captures in a \"capture "
+                "set seconds between consecutive captures in a \"capture "
                 "session\" (default: 0.5)"))
         parser.add_argument(
             '--weather',
             action='store_true', default=None, dest='yweather',
-            help="Enable internet weather check")
+            help="enable internet weather check")
         parser.add_argument(
             '--no-weather',
             action='store_true', default=None, dest='nweather',
-            help="Disable internet weather check")
+            help="disable internet weather check")
         # Logging
         parser.add_argument(
             '--loglevel',
             metavar='<level>', dest='loglevel', default=None,
-            help="Log level: error, warning, info (default) or debug")
+            help="log level: error, warning, info (default) or debug")
         parser.add_argument(
             '--logfile',
             metavar='<path>', dest='logfile', default=None,
             help=(
-                "Log output file (tempfile inside calise tempdir if not "
+                "log output file (tempfile inside calise tempdir if not "
                 "specified)"))
         parser.add_argument(
             '-d', '--dump',

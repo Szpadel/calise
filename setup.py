@@ -30,6 +30,15 @@ class replacement():
                         '='.join(line.split('=')[1:]).replace(' ', '')[1:-1])
 
 
+# Obtain Setup Directory (even if called from outside)
+def getsd():
+    baseName = sys.argv[0].\
+        replace('./', '').\
+        replace(os.path.basename(sys.argv[0]), '')
+    path = os.path.join(os.getcwd(), baseName)
+    return path
+
+
 # Developement versions track
 #
 # Returns either:
@@ -41,20 +50,18 @@ class replacement():
 #
 def get_svn_revision(path=None):
     if path is None:
-        baseName = sys.argv[0].replace("./","").\
-            replace(os.path.basename(sys.argv[0]),"")
-        path = os.path.join(os.getcwd(), baseName)
+        path = getsd()
     infos = replacement(path)
     # if there's git directory process as git
-    if os.path.isdir('%s/.git' % path):
+    if os.path.isdir(os.path.join(path, '.git')):
         gitRev = os.popen('git rev-parse --short HEAD')
         gitRev = gitRev.read()[:-1]
         versionString = u'GIT-%s' % gitRev
     # else if there's svn directory process as subversion
-    elif os.path.isdir('%s/.svn' % path):
-        db_path = '%s/.svn/wc.db' % path
+    elif os.path.isdir(os.path.join(path, '.svn')):
+        db_path = os.path.join(path, '.svn', 'wc.db') % path
         with open(db_path) as fp:
-            content = fp.read().replace("svn/ver/","\nsvn/ver/").split("\n")
+            content = fp.read().replace('svn/ver/', '\nsvn/ver/').split('\n')
         prog = re.compile('svn/ver/([0-9]+)/')
         revisions = []
         for line in content:
@@ -78,18 +85,34 @@ def get_svn_revision(path=None):
     return versionString
 
 
+# remove '.py' suffix from scripts in 'bin' directory
+def clearScriptExtensions(path=None):
+    if path is None:
+        path = getsd()
+        binPath = os.path.join(path, 'bin')
+    if os.path.isdir(binPath):
+        retList = []
+        for script in os.listdir(binPath):
+            os.rename(
+                os.path.join(binPath, script),
+                os.path.join(binPath, script.replace('.py', '')))
+            retList.append(os.path.join('bin', script.replace('.py', '')))
+
+
+clearScriptExtensions()
 # instruct setup to build c modules with their included libraries
-addModule1 = Extension("calise.screenBrightness",
-    sources = ["src/modules/screenBrightness.c"],
-    libraries = ["X11"])
-
-
-setup(name = 'calise',
-      version = get_svn_revision(),
-      description = 'automatically adjust backlight trough a camera',
-      author = "Nicolò Barbon",
-      author_email = "smilzoboboz@gmail.com",
-      url = 'http://sourceforge.net/projects/calise/',
-      license = 'GNU GPL v3',
-      ext_modules = [addModule1],
+addModule1 = Extension(
+    'calise.screenBrightness',
+    sources = ['src/modules/screenBrightness.c'],
+    libraries = ['X11'])
+# actual setup
+setup(name='calise',
+      version=get_svn_revision(),
+      description="automatically adjust backlight trough a camera",
+      author='Nicolò Barbon',
+      author_email='smilzoboboz@gmail.com',
+      url='http://sourceforge.net/projects/calise/',
+      license='GNU GPL v3',
+      #scripts=clearScriptExtensions(),
+      ext_modules=[addModule1],
      )

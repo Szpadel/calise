@@ -50,10 +50,13 @@ NOTE: for differences in distro-specific installation refer below
   directory position, can also be "/lib/udev/rules.d" or others):
 
     # must be run as root
-    interfaces=`udevadm info -a -p /sys/class/backlight/* |
-      grep "KERNEL=" |
-      sed s'/KERNEL==//' |
-      awk -F ['"'] '{print $2}'`
+    for path in /sys/class/backlight/*
+    do
+      interfaces="`udevadm info -a -p ${path} |
+        grep "KERNEL=" |
+        sed s'/KERNEL==//' |
+        awk -F ['"'] '{print $2}'` ${interfaces}"
+    done
     for interface in $interfaces
     do
       udevrule="$pkgdir/lib/udev/rules.d/99-backlight-$interface.rules"
