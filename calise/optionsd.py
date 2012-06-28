@@ -99,7 +99,7 @@ class wlogger():
         self.ch.setLevel(ilvl)
 
 
-class daemon_argumenter():
+class serviceGetArgs():
 
     def __init__(self, argslist=None):
         self.argslist = argslist

@@ -100,12 +100,12 @@ if __name__ == '__main__':
         )
 
     # NOTE: temporary fix until proper implementation
-    # Checks for a running daemon instance and if so, stops it (at the end of
-    # execution daemon will be started again, take a look at the end
+    # Checks for a running service instance and if so, stops it (at the end of
+    # execution service will be started again, take a look at the end
     pid = obtainWorkdir()
     if pid:
         sys.stderr.write(
-            "Daemon version of the program should be still running.\n"
+            "Service version of the program should be still running.\n"
             "If you think this is an error, please delete \"%s\" and run "
             "again.\n" % pid)
         sys.stderr.flush()
@@ -251,9 +251,9 @@ if __name__ == '__main__':
 
 
     # NOTE:
-    # Right now the program isn't aware of the options given to the daemon,
+    # Right now the program isn't aware of the options given to the service,
     # so it will start a "default" instance, that means it will read from
     # "default" profile
-    #if daemon_wasAlive:
+    #if service_wasAlive:
     #    p = Popen(["calised","--resume"],stdout=PIPE,stderr=PIPE)
     #    ret = p.communicate()

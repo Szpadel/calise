@@ -135,7 +135,7 @@ def checkServiceCommands(arglist):
             exitCode = 0
             break
         elif arglist.count(cmd):
-            hp = options.daemon_argumenter([])
+            hp = options.serviceGetArgs([])
             hp.init_args()
             hp.parser.print_usage()
             sys.stderr.write("%s: error: start service first\n" % sys.argv[0])
@@ -307,7 +307,7 @@ def mainService(kargs):
 def main():
     retCode = 0
     # Arguments parse
-    ap = options.daemon_argumenter(sys.argv[1:])
+    ap = options.serviceGetArgs(sys.argv[1:])
     ap.init_args()
     ap.parse_settings()
     # critical errors checks

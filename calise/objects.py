@@ -226,7 +226,7 @@ class objects():
         self.logger.debug("Function '%s' returned %d" % ('writeStep', r))
         return 0
 
-    """ daemon "core"
+    """ service "core"
     With the help of the getSun function (which use ephem module) in
     calise.sun module, discovers current time of the day and sets sleep time
     before a new capture and increasing/decreasing writeStep args accordingly
