@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+# if calise service is not capturing then prevent it from capturing just
+# before hibernate/suspend, otherwise waits until capture is finished and
+# then hiberantes/suspends
+#
+
+case "$1" in
+    hibernate|suspend)
+       /usr/bin/calised --pause
+       ;;
+    resume|thaw)
+       /usr/bin/calised --resume
+       ;;
+esac
