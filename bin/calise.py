@@ -184,7 +184,7 @@ if __name__ == '__main__':
                 arguments.profile,
                 arguments.cam,
                 arguments.path.rstrip('/' + os.path.basename(arguments.path)),
-                ', '.join(strt),
+                ' -> '.join([strt[0],strt[-1]]),
                 arguments.delta,
                 arguments.ofs,
                 arguments.gap,

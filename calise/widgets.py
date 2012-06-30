@@ -78,39 +78,38 @@ class BacklightWidget(QtGui.QWidget):
             qp.drawRect(0, 0, till, h)
         qp.setOpacity(1.0)
         pen = QtGui.QPen(
-            self.palette.shadow().color(), 1, QtCore.Qt.SolidLine
-        )
+            self.palette.shadow().color(), 1, QtCore.Qt.SolidLine)
         qp.setPen(pen)
         qp.setBrush(QtCore.Qt.NoBrush)
         qp.drawRect(0, 0, w-1, h-1)
 
         if self.sps is None: return
         steps = self.sps
-        self.pxs = w / ( steps + .5 )
+        self.pxs = w / (steps + .5)
 
         # draw step bars
-        pos = int( round(self.cur*self.pxs, 0) )
+        pos = int(round(self.cur * self.pxs, 0))
         qp.drawLine(pos, 1, pos, h)
         qp.setOpacity(0.33)
-        pos = int( round(self.tgt*self.pxs, 0) )
+        pos = int(round(self.tgt * self.pxs, 0))
         qp.drawLine(pos, 1, pos, h)
         qp.setOpacity(1.00)
 
         # draw scale
-        pen = QtGui.QPen(
-            self.palette.buttonText().color(), 1, QtCore.Qt.SolidLine
-        )
-        qp.setPen(pen)
-        pos = int( round( 1 * self.pxs - self.pxs / 2.0, 0 ) )
-        qp.drawLine( pos, 1, pos, 6 )
-        for i in range( 1, steps ):
-            pos = int( round( i * self.pxs, 0 ) )
-            pon = int( round( i * self.pxs + self.pxs / 2, 0 ) )
-            qp.drawLine( pos, 1, pos, 10 )
-            qp.drawLine( pon, 1, pon, 6 )
-        pos = int( round( ( i + 1 ) * self.pxs, 0 ) )
-        qp.drawLine( pos, 1, pos, 10 )
-        self.setMinimumSize( 10 * steps, 30 )
+        if int(round(steps, 0)) < 21:
+            pen = QtGui.QPen(
+                self.palette.buttonText().color(), 1, QtCore.Qt.SolidLine)
+            qp.setPen(pen)
+            pos = int(round(1 * self.pxs - self.pxs / 2.0, 0))
+            qp.drawLine(pos, 1, pos, 6)
+            for i in range(1, steps):
+                pos = int(round(i * self.pxs, 0))
+                pon = int(round(i * self.pxs + self.pxs / 2, 0))
+                qp.drawLine(pos, 1, pos, 10)
+                qp.drawLine(pon, 1, pon, 6)
+            pos = int(round((i + 1) * self.pxs, 0))
+            qp.drawLine(pos, 1, pos, 10)
+            self.setMinimumSize(10 * steps, 30)
 
     # dummy mousePress override, initializes mouseEvent
     def mousePressEvent(self, event):
@@ -124,7 +123,8 @@ class BacklightWidget(QtGui.QWidget):
         if self.MousePressed == True:
             self.MousePressed = False
         steps = self.sps
-        cur = int( round( event.x() / self.pxs, 0 ) )
+        pxs = self.width() / (steps + .5)
+        cur = int(round(event.x() / pxs, 0))
         if (
             event.x() < 0 or event.x() > self.width() or
             event.y() < 0 or event.y() > self.height()

@@ -329,8 +329,9 @@ class CliCalibration():
             "sysfs backlight path and displays them ordered from lower to "
             "higher backlight level."))
         self.BacklightPassage()
-        print(">>> " + _("backlight steps: %s") % ", ".join(
-            [str(x) for x in range(self.bkofs, self.steps + self.bkofs)]))
+        print(
+            ">>> " + _("backlight steps: %s")
+            % " -> ".join([str(self.bkofs), str(self.steps - self.bkofs)]))
         print("\n")
 
         # Geo-coordinates passage
