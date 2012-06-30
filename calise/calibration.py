@@ -21,7 +21,6 @@ import os
 import ConfigParser
 import threading
 import math
-import time
 from random import random
 from time import time, sleep
 from subprocess import Popen, PIPE
@@ -39,10 +38,10 @@ from calise import optionsd
 def getMinimumLevel(blpath):
     with open(blpath) as fp:
         currentLevel = int(fp.read())
-    startTime = time.time()
+    startTime = time()
     x = 0
     # anti-infiniteLoop lock based on time (5 seconds)
-    while time.time() - startTime < 5:
+    while time() - startTime < 5:
         try:
             with open(blpath, 'w') as fp:
                 fp.write(str(x))
