@@ -327,13 +327,8 @@ def main():
     # client query
     # if service is active, cli arguments are managed as execution commands
     if tmp == 0:
-        # choose DBus bus between Session and System
-        # NOTE: root, automatically points to SystemBus since cannot start
-        #       services on SessionBus by default and also cannot manage
-        #       user-started services (`su $USER -c 'command'` for that)
-        #if os.getuid() == 0:
-        #    sbus = dbus.SystemBus
         tu.getpuid(tu.pid)
+        # choose DBus bus between Session and System
         # if process with pid doesn't exist (and so doesn't uid) means that
         # process terminated unexpectedly and left behind temporary dir
         if tu.uid is None:
@@ -341,8 +336,12 @@ def main():
             return 20
         elif tu.uid == 0:
             sbus = dbus.SystemBus
-        elif tu.uid == os.getuid() or (tu.uid != 0 and os.getuid() == 0):
+        elif tu.uid == os.getuid() or os.getuid() == 0:
             sbus = dbus.SessionBus
+            # root is able to control every service instance (whoever user
+            # started it)
+            if os.getuid() == 0:
+                os.setuid(tu.uid)
         else:
             print(
                 "%s: error: the service was started by another user"
