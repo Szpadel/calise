@@ -32,7 +32,28 @@ from calise.system import computation
 from calise import optionsd
 
 
-# -- "PURE" FUNCTIONS ---------------------------------------------------------
+# == "PURE" FUNCTIONS =========================================================
+# Get minimum backlight level trying to write values on the device until no
+# IOError errno22 is returned
+def getMinimumLevel(blpath):
+    with open(blpath) as fp:
+        currentLevel = int(fp.read())
+    startTime = time.time()
+    x = 0
+    # anti-infiniteLoop lock based on time (5 seconds)
+    while time.time() - startTime < 5:
+        try:
+            with open(blpath, 'w') as fp:
+                fp.write(str(x))
+            with open(blpath, 'w') as fp:
+                fp.write(str(currentLevel))
+            return x
+        except IOError as err:
+            if err.errno == 22:
+                x += 1
+    return None
+
+
 # Just a bad, hackish function to obtain data from udevadm
 # Reads from UDEV's class video4linux specified device following standard
 # naming rules... if device name was customized things may go bad
@@ -457,9 +478,11 @@ class CliCalibration():
             self.invert = config.getboolean('Backlight', 'invert')
         else:
             step0 = computation()
-            raw_input(_("Set the backlight to the minimum then press enter"))
             step0.get_values('all', self.bfile)
-            bkofs = step0.bkstp
+            bkofs = getMinimumLevel(self.bfile)
+            if bkofs is None:
+                raw_input(_("Set the backlight to minimum then press enter"))
+                bkofs = step0.bkstp
             steps = step0.bkmax
             if steps < bkofs:
                 invert = True
