@@ -105,6 +105,9 @@ addModule1 = Extension(
     'calise.screenBrightness',
     sources = ['src/modules/screenBrightness.c'],
     libraries = ['X11'])
+addModule2 = Extension(
+    'calise.camera',
+    sources = ['src/modules/camera.c'],)
 # actual setup
 setup(name='calise',
       version=get_svn_revision(),
@@ -114,5 +117,5 @@ setup(name='calise',
       url='http://sourceforge.net/projects/calise/',
       license='GNU GPL v3',
       #scripts=clearScriptExtensions(),
-      ext_modules=[addModule1],
+      ext_modules=[addModule1, addModule2],
      )
