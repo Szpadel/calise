@@ -331,8 +331,8 @@ def main():
         # NOTE: root, automatically points to SystemBus since cannot start
         #       services on SessionBus by default and also cannot manage
         #       user-started services (`su $USER -c 'command'` for that)
-        if os.getuid() == 0:
-            sbus = dbus.SystemBus
+        #if os.getuid() == 0:
+        #    sbus = dbus.SystemBus
         tu.getpuid(tu.pid)
         # if process with pid doesn't exist (and so doesn't uid) means that
         # process terminated unexpectedly and left behind temporary dir
@@ -341,7 +341,7 @@ def main():
             return 20
         elif tu.uid == 0:
             sbus = dbus.SystemBus
-        elif tu.uid == os.getuid():
+        elif tu.uid == os.getuid() or (tu.uid != 0 and os.getuid() == 0):
             sbus = dbus.SessionBus
         else:
             print(

@@ -50,7 +50,7 @@ def getSun(latitude, longitude, curTime=None):
         curTime = time.time()
     obs = ephem.Observer()
     obs.lat = str(latitude)
-    obs.lon = str(longitude)
+    obs.long = str(longitude)
     sun = ephem.Sun()
     dst = getDst(curTime)
     # pyEphem works on utc time. This requires a forth conversion since every
