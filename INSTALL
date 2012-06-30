@@ -66,26 +66,28 @@ NOTE: for differences in distro-specific installation refer below
 
     NOTE: As said before, you have to be member of the video group or that 
           won't work (of course you can choose the group you prefer)
+          If you chose a group different from video, you'll have to edit
+          the file other/org.calise.conf (or directly
+          /etc/dbus-1/system.d/org.calise.conf if already installed) and
+          replace (line 26) like this:
+          -    <policy group="video">
+          +    <policy group="thegroupyouchose">
 
 
   Now you have (hopefully) correctly installed and first configured calise.
   To see what you can do now you may take a look at README, man pages and/or
   cli help options:
     calise --help
-    calised help
-    calised --help # with daemon started
+    calised --help
 
 
 
-Ubuntu 11.10 (and probabily also previous)
+Ubuntu (tested on 11.04, 11.10 and 12.04 but also previous should work fine)
 
   You have to prepare the system so, first enable community repository (for 
   pygame) then run:
-    # apt-get install python-imaging python-qt4 python-numpy python-pygame python-setuptools python-distutils-extra python-xdg build-essential python-dev libx11-dev
-
-  Also you need PyEphem, it doesn't seem there's a pre-built package, but in
-  the official site you can find detailed install informations:
-    http://rhodesmill.org/pyephem/
+    # apt-get install python-imaging python-qt4 python-numpy python-pygame python-setuptools python-distutils-extra python-xdg build-essential python-dev libx11-dev python-pip python-dbus
+    # pip install pyephem
 
   Move to the folder where you extracted calise and run:
     $ env python setup.py build
@@ -102,4 +104,4 @@ OpenSuse 12.1 (and probabily also previous)
   NOTE: To un correctly the calibration you need to symlink the program 
         /sbin/udevadm to /usr/sbin, it should be completely safe (and if you 
         think is not, after calibration you can remove the symlink):
-    # ln -s /sbin/udevadm /usr/sbin/udevadm
+        # ln -s /sbin/udevadm /usr/sbin/udevadm

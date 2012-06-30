@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-06-21 19:35+0200\n"
+"POT-Creation-Date: 2012-06-30 09:15+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -134,151 +134,151 @@ msgstr ""
 msgid "Disables the graphical user interface"
 msgstr ""
 
-#: ../calise/calibration.py:249
+#: ../calise/calibration.py:253
 msgid "yes"
 msgstr ""
 
-#: ../calise/calibration.py:249 ../calise/calibration.py:253
-#: ../calise/calibration.py:257
+#: ../calise/calibration.py:253 ../calise/calibration.py:257
+#: ../calise/calibration.py:261
 msgid "y"
 msgstr ""
 
-#: ../calise/calibration.py:250
+#: ../calise/calibration.py:254
 msgid "no"
 msgstr ""
 
-#: ../calise/calibration.py:250 ../calise/calibration.py:253
-#: ../calise/calibration.py:255
+#: ../calise/calibration.py:254 ../calise/calibration.py:257
+#: ../calise/calibration.py:259
 msgid "n"
 msgstr ""
 
-#: ../calise/calibration.py:255
+#: ../calise/calibration.py:259
 msgid "Y"
 msgstr ""
 
-#: ../calise/calibration.py:257
+#: ../calise/calibration.py:261
 msgid "N"
 msgstr ""
 
-#: ../calise/calibration.py:269
+#: ../calise/calibration.py:273
 msgid "Please respond with 'yes' or 'no' (or 'y' or 'n')"
 msgstr ""
 
-#: ../calise/calibration.py:284
+#: ../calise/calibration.py:288
 msgid ""
 "This passage gets a valid profile name to be stored as config file's "
 "filename."
 msgstr ""
 
-#: ../calise/calibration.py:287
+#: ../calise/calibration.py:291
 #, python-format
 msgid "profile name: %s"
 msgstr ""
 
-#: ../calise/calibration.py:288
+#: ../calise/calibration.py:292
 #, python-format
 msgid "profile path: %s"
 msgstr ""
 
-#: ../calise/calibration.py:294
+#: ../calise/calibration.py:298
 msgid ""
 "This passage lists all available sysfs backlight directories and, if more "
 "than one, asks wich has to be used."
 msgstr ""
 
-#: ../calise/calibration.py:297
+#: ../calise/calibration.py:301
 #, python-format
 msgid "sysfs backlight path: %s"
 msgstr ""
 
-#: ../calise/calibration.py:303
+#: ../calise/calibration.py:307
 msgid ""
 "This passage obtains available backlight steps with selected sysfs backlight "
 "path and displays them ordered from lower to higher backlight level."
 msgstr ""
 
-#: ../calise/calibration.py:307
+#: ../calise/calibration.py:311
 #, python-format
 msgid "backlight steps: %s"
 msgstr ""
 
-#: ../calise/calibration.py:314
+#: ../calise/calibration.py:318
 msgid ""
-"This passage asks for latitude and longitude; these are needed for daemon "
-"execution. The daemon has a lot of spatio-temporal optimization to reduce "
+"This passage asks for latitude and longitude; these are needed for service "
+"execution. The service has a lot of spatio-temporal optimization to reduce "
 "power and cpu usage, based on these coordinates (thanks to the grat \"ephem"
 "\" module)."
 msgstr ""
 
-#: ../calise/calibration.py:319
+#: ../calise/calibration.py:323
 #, python-format
 msgid "Latitude, Longitude: %.6f, %.6f"
 msgstr ""
 
-#: ../calise/calibration.py:325
+#: ../calise/calibration.py:329
 msgid ""
 "This passage lists all available cameras on this machine and, if more than "
 "one, asks wich camera has to be used."
 msgstr ""
 
-#: ../calise/calibration.py:328
+#: ../calise/calibration.py:332
 #, python-format
 msgid "camera: %s"
 msgstr ""
 
-#: ../calise/calibration.py:338
+#: ../calise/calibration.py:342
 msgid ""
 "This passage lets the program be aware of the lower lightness that can be "
 "registered by the camera to contrast its white balance feature."
 msgstr ""
 
-#: ../calise/calibration.py:343
+#: ../calise/calibration.py:347
 #, python-format
 msgid "Average camera offset: %.1f"
 msgstr ""
 
-#: ../calise/calibration.py:349
+#: ../calise/calibration.py:353
 msgid ""
 "This passage starts an interactive \"capture\" session where you'll be asked "
 "to select the best backlight step for that very moment. And of course \"the "
 "more the brightness, the more the precision\"."
 msgstr ""
 
-#: ../calise/calibration.py:355
+#: ../calise/calibration.py:359
 #, python-format
 msgid ""
 "percentage: %.2f%% and backlight step: %d for current ambient brightness."
 msgstr ""
 
-#: ../calise/calibration.py:357
+#: ../calise/calibration.py:361
 #, python-format
 msgid "Conversion scale delta: %.3f"
 msgstr ""
 
-#: ../calise/calibration.py:366
+#: ../calise/calibration.py:370
 msgid "Enter a name for the new profile"
 msgstr ""
 
-#: ../calise/calibration.py:370
+#: ../calise/calibration.py:374
 msgid "Please retry and enter a valid name."
 msgstr ""
 
-#: ../calise/calibration.py:372
+#: ../calise/calibration.py:376
 msgid ""
 "Since it'll be a filename, chars not supported by your os will raise an error"
 msgstr ""
 
-#: ../calise/calibration.py:379
+#: ../calise/calibration.py:383
 msgid "The selected profile already exists, overwrite?"
 msgstr ""
 
-#: ../calise/calibration.py:411
+#: ../calise/calibration.py:415
 msgid ""
 "\n"
 "Your system does not appear to have controllable backlight\n"
 msgstr ""
 
-#: ../calise/calibration.py:418
+#: ../calise/calibration.py:422
 #, python-format
 msgid ""
 "\n"
@@ -287,25 +287,25 @@ msgid ""
 "one of the path displayed changes its value when changing backlight level."
 msgstr ""
 
-#: ../calise/calibration.py:424
+#: ../calise/calibration.py:428
 #, python-format
 msgid "Choose one of the path listed above (None=%d): "
 msgstr ""
 
-#: ../calise/calibration.py:434 ../calise/calibration.py:561
+#: ../calise/calibration.py:438 ../calise/calibration.py:569
 #, python-format
 msgid "Please retry and enter an integer in the valid range 1-%d!"
 msgstr ""
 
-#: ../calise/calibration.py:437 ../calise/calibration.py:564
+#: ../calise/calibration.py:441 ../calise/calibration.py:572
 msgid "Please retry and enter an integer!"
 msgstr ""
 
-#: ../calise/calibration.py:456
+#: ../calise/calibration.py:460
 msgid "Set the backlight to the minimum then press enter"
 msgstr ""
 
-#: ../calise/calibration.py:480
+#: ../calise/calibration.py:488
 #, python-format
 msgid ""
 "\n"
@@ -313,94 +313,94 @@ msgid ""
 "would you like to use these values also for that one? "
 msgstr ""
 
-#: ../calise/calibration.py:487
+#: ../calise/calibration.py:495
 msgid ""
 "If you don't know where to find latitude/longitude, http://www.earthtools."
 "org/ is a good place to start from."
 msgstr ""
 
-#: ../calise/calibration.py:490
+#: ../calise/calibration.py:498
 msgid ""
 "\n"
 "NOTE: N and E values have [+], S and W have instead [-]."
 msgstr ""
 
-#: ../calise/calibration.py:512
+#: ../calise/calibration.py:520
 msgid ""
 "Please enter your latitude and longitude as comma separated float degrees "
 "(take a look a the examples above): "
 msgstr ""
 
-#: ../calise/calibration.py:523
+#: ../calise/calibration.py:531
 msgid ""
 "Either latitude or longitude values are wrong, please check and retry.\n"
 msgstr ""
 
-#: ../calise/calibration.py:550
+#: ../calise/calibration.py:558
 #, python-format
 msgid "Choose one of cams listed above (None=%s): "
 msgstr ""
 
-#: ../calise/calibration.py:582
+#: ../calise/calibration.py:590
 msgid "Cover the webcam and then press enter"
 msgstr ""
 
-#: ../calise/calibration.py:584 ../calise/calibration.py:599
+#: ../calise/calibration.py:592 ../calise/calibration.py:607
 msgid "Now calibrating"
 msgstr ""
 
-#: ../calise/calibration.py:585
+#: ../calise/calibration.py:593
 msgid "do not uncover the webcam"
 msgstr ""
 
-#: ../calise/calibration.py:598
+#: ../calise/calibration.py:606
 msgid "Uncover the camera and press enter when ready to start"
 msgstr ""
 
-#: ../calise/calibration.py:607
+#: ../calise/calibration.py:615
 msgid "Capture thread started."
 msgstr ""
 
-#: ../calise/calibration.py:612
+#: ../calise/calibration.py:620
 msgid ""
 "Choose a value for the current ambient brightness, consider that the more "
 "brightness there is, the more precise will the scale of the program be, "
 "supported values are backlight steps or percents (eg. 5 or 56%): "
 msgstr ""
 
-#: ../calise/calibration.py:634
+#: ../calise/calibration.py:642
 #, python-format
 msgid ""
 "Choosen percentage value roughly equals to the %dth backlight step, would "
 "you like to use that value?"
 msgstr ""
 
-#: ../calise/calibration.py:656
+#: ../calise/calibration.py:664
 #, python-format
 msgid ""
 "Choosen backlight step value roughly equals to %.2f%% of ambient brightness, "
 "would you like to use that value?"
 msgstr ""
 
-#: ../calise/calibration.py:664 ../calise/calibration.py:670
+#: ../calise/calibration.py:672 ../calise/calibration.py:678
 msgid "Please retry and enter a value according to the rules above"
 msgstr ""
 
-#: ../calise/calibration.py:681
+#: ../calise/calibration.py:689
 msgid "Making a config file with the choosen settings..."
 msgstr ""
 
-#: ../calise/calibration.py:708
+#: ../calise/calibration.py:716
 #, python-format
 msgid "config file saved as: %s"
 msgstr ""
 
-#: ../calise/calibration.py:712
+#: ../calise/calibration.py:720
 #, python-format
 msgid "To use the new profile add \"--profile %s\" to the switches"
 msgstr ""
 
-#: ../calise/calibration.py:719
+#: ../calise/calibration.py:727
 #, python-format
 msgid ""
 "You may want to use this profile as system-wide one; to achieve that copy "
