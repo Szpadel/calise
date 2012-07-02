@@ -1,4 +1,5 @@
 #include <Python.h>
+
 /* #include <structmember.h> */
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,10 +16,22 @@
 #include <sys/ioctl.h>
 
 #include <asm/types.h>          /* for videodev2.h */
-
 #include <linux/videodev2.h>
 
+#define CLEAR(x) memset (&(x), 0, sizeof (x))
 
+
+
+static int
+xioctl (int fd, int request, void * arg)
+{
+    int r;
+
+    do r = ioctl (fd, request, arg);
+    while (-1 == r && EINTR == errno);
+
+    return r;
+}
 
 typedef enum {
     IO_METHOD_READ,
@@ -29,33 +42,31 @@ typedef enum {
 static io_method io = IO_METHOD_MMAP;
 
 
-
-
-
-
-
-
-
-
 struct buffer {
     void * start;
     size_t length;
 };
 
+struct buffer * buffers       = NULL;
+static unsigned int n_buffers = 0;
 
 typedef struct PyDeviceObject {
     PyObject_HEAD
     char* dev_name;                     /* device path */
     int fd;                             /* opened device */
-    struct v4l2_capability cap;
-    struct v4l2_cropcap cropcap;
-    struct buffer* buffers;
-    unsigned int n_buffers;
+    //struct v4l2_capability cap;
+    //struct v4l2_cropcap cropcap;
+    //struct buffer* buffers;
+    //unsigned int n_buffers;
 } PyDeviceObject;
+
+int width = 160;
+int height = 120;
+
 
 
 /*
- * retrieve-data functions
+ * retrieve-data functions (python objects)
  *
  */
 
@@ -67,12 +78,518 @@ device_get_name (PyDeviceObject *self)
 
 
 /*
- * core functions
+ * core functions (non-python objects)
+ *
+ */
+
+static int process_image(const void* p)
+{
+    int line, column;
+    unsigned char *py, *pu, *pv;
+    int r=0, g=0, b=0;
+    double area=0;
+    int bri=0;
+
+    /* debugging lines (uncomment all debug lines inside the function to
+     * proper debug)
+     *
+     * int cr, cg, cb;
+     *
+     * FILE *fp;
+     * fp = fopen( "/tmp/zacchetepaffete.log", "wb" );
+     *
+     */
+
+    /* In this format each four bytes is two pixels. Each four bytes is two Y's, a Cb and a Cr.
+       Each Y goes to one of* the pixels, and the Cb and Cr belong to both pixels. */
+    py = (unsigned char*)p;
+    pu = (unsigned char*)p + 1;
+    pv = (unsigned char*)p + 3;
+
+    #define CLIP(x) ( (x)>=0xFF ? 0xFF : ( (x) <= 0x00 ? 0x00 : (x) ) )
+
+    for (line = 0; line < height; ++line) {
+        for (column = 0; column < width; ++column) {
+
+            r += CLIP((double)*py + 1.402*((double)*pv-128.0));
+            g += CLIP((double)*py - 0.344*((double)*pu-128.0) - 0.714*((double)*pv-128.0));
+            b += CLIP((double)*py + 1.772*((double)*pu-128.0));
+
+            /* debugging lines
+             *
+             * cr = CLIP((double)*py + 1.402*((double)*pv-128.0));
+             * cg = CLIP((double)*py - 0.344*((double)*pu-128.0) - 0.714*((double)*pv-128.0));
+             * cb = CLIP((double)*py + 1.772*((double)*pu-128.0));
+             * fprintf(fp, "%d:%d rgb(%d,%d,%d)\n", column + 1, line + 1, cr, cg, cb);
+             * r += cr;
+             * g += cg;
+             * b += cb;
+             *
+             */
+
+            // increase py every time
+            py += 2;
+
+            // increase pu,pv every second time
+            if ((column & 1)==1) {
+                pu += 4;
+                pv += 4;
+            }
+        }
+    }
+
+    area = (width)*(height);
+    r = r/area;
+    g = g/area;
+    b = b/area;
+    bri = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    /* debugging lines
+     *
+     * fprintf(fp, "\n");
+     * fprintf(fp, "area: %f\n", area);
+     * fprintf(fp, "brightness: %d\n", bri);
+     * fclose(fp);
+     *
+     */
+
+    return bri;
+}
+
+
+static int
+init_read (unsigned int buffer_size)
+{
+    buffers = calloc (1, sizeof (*buffers));
+
+    if (!buffers)
+        return 1;
+
+    buffers[0].length = buffer_size;
+    buffers[0].start = malloc (buffer_size);
+
+    if (!buffers[0].start)
+        return 2;
+}
+
+
+static int
+init_mmap (PyDeviceObject *self)
+{
+    struct v4l2_requestbuffers req;
+
+    CLEAR (req);
+
+    req.count               = 1;
+    req.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    req.memory              = V4L2_MEMORY_MMAP;
+
+    if (-1 == xioctl (self->fd, VIDIOC_REQBUFS, &req)) {
+        if (EINVAL == errno)
+            return 1;
+        else
+            return 2;
+    }
+
+    if (req.count < 1)
+        return 3;
+
+    buffers = calloc (req.count, sizeof (*buffers));
+
+    if (!buffers)
+        return 11;
+
+    for (n_buffers = 0; n_buffers < req.count; ++n_buffers) {
+        struct v4l2_buffer buf;
+
+        CLEAR (buf);
+
+        buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory      = V4L2_MEMORY_MMAP;
+        buf.index       = n_buffers;
+
+        if (-1 == xioctl (self->fd, VIDIOC_QUERYBUF, &buf))
+            return 21;
+
+        buffers[n_buffers].length = buf.length;
+        buffers[n_buffers].start = mmap (
+                NULL /* start anywhere */,
+                buf.length,
+                PROT_READ | PROT_WRITE /* required */,
+                MAP_SHARED /* recommended */,
+                self->fd, buf.m.offset);
+
+        if (MAP_FAILED == buffers[n_buffers].start)
+            return 31;
+    }
+}
+
+
+static int
+init_userp (PyDeviceObject *self, unsigned int buffer_size)
+{
+    struct v4l2_requestbuffers req;
+    unsigned int page_size;
+
+    page_size = getpagesize ();
+    buffer_size = (buffer_size + page_size - 1) & ~(page_size - 1);
+
+    CLEAR (req);
+
+    req.count               = 1;
+    req.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    req.memory              = V4L2_MEMORY_USERPTR;
+
+    if (-1 == xioctl (self->fd, VIDIOC_REQBUFS, &req)) {
+        if (EINVAL == errno)
+            return 1;
+        else
+            return 2;
+    }
+
+    buffers = calloc (1, sizeof (*buffers));
+
+    if (!buffers)
+        return 11;
+
+    for (n_buffers = 0; n_buffers < 1; ++n_buffers) {
+        buffers[n_buffers].length = buffer_size;
+        buffers[n_buffers].start = memalign (/* boundary */ page_size, buffer_size);
+
+        if (!buffers[n_buffers].start)
+            return 21;
+    }
+}
+
+
+
+
+/*
+ * core functions (python objects)
  *
  */
 
 static PyObject*
-device_init (PyDeviceObject *self, PyObject *args)
+read_frame (PyDeviceObject *self)
+{
+    struct v4l2_buffer buf;
+    unsigned int i;
+    int bright=0;
+
+    switch (io) {
+        case IO_METHOD_READ:
+            if (-1 == read (self->fd, buffers[0].start, buffers[0].length)) {
+                switch (errno) {
+                    case EAGAIN:
+                        return Py_BuildValue("(si)", "errno", 1);
+
+                    case EIO:
+                        /* Could ignore EIO, see spec. */
+                        return Py_BuildValue("(si)", "errno", 3);
+                        /* fall through */
+
+                    default:
+                        return Py_BuildValue("(si)", "errno", 2);
+                }
+            }
+
+            bright = process_image (buffers[0].start);
+
+            break;
+
+        case IO_METHOD_MMAP:
+            CLEAR (buf);
+
+            buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+            buf.memory = V4L2_MEMORY_MMAP;
+
+            if (-1 == xioctl (self->fd, VIDIOC_DQBUF, &buf)) {
+                switch (errno) {
+                    case EAGAIN:
+                        return Py_BuildValue("(si)", "errno", 11);
+
+                    case EIO:
+                        /* Could ignore EIO, see spec. */
+                        return Py_BuildValue("(si)", "errno", 13);
+                        /* fall through */
+
+                    default:
+                        return Py_BuildValue("(si)", "errno", 12);
+                }
+            }
+
+            assert (buf.index < n_buffers);
+
+            bright = process_image (buffers[buf.index].start);
+
+            if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf))
+                return Py_BuildValue("(si)", "errno", 21);
+            break;
+
+        case IO_METHOD_USERPTR:
+            CLEAR (buf);
+
+            buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+            buf.memory = V4L2_MEMORY_USERPTR;
+
+            if (-1 == xioctl (self->fd, VIDIOC_DQBUF, &buf)) {
+                switch (errno) {
+                    case EAGAIN:
+                        return Py_BuildValue("(si)", "errno", 31);
+
+                    case EIO:
+                        /* Could ignore EIO, see spec. */
+                        return Py_BuildValue("(si)", "errno", 33);
+                        /* fall through */
+
+                    default:
+                        return Py_BuildValue("(si)", "errno", 32);
+                }
+            }
+
+            for (i = 0; i < n_buffers; ++i)
+                if (buf.m.userptr == (unsigned long) buffers[i].start
+                    && buf.length == buffers[i].length)
+                    break;
+
+            assert (i < n_buffers);
+
+            bright = process_image ((void *) buf.m.userptr);
+
+            if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf))
+                return Py_BuildValue("(si)", "errno", 41);
+            break;
+    }
+    return Py_BuildValue("i", bright);
+}
+
+
+
+static PyObject*
+device_init (PyDeviceObject *self)
+{
+    struct v4l2_capability cap;
+    struct v4l2_cropcap cropcap;
+    struct v4l2_crop crop;
+    struct v4l2_format fmt;
+    unsigned int min;
+
+    if (-1 == xioctl (self->fd, VIDIOC_QUERYCAP, &cap)) {
+        if (EINVAL == errno)
+            return Py_BuildValue("i", 1);
+        else
+            return Py_BuildValue("i", 2);
+    }
+
+    if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
+        return Py_BuildValue("i", 3);
+    }
+
+    switch (io) {
+        case IO_METHOD_READ:
+            if (!(cap.capabilities & V4L2_CAP_READWRITE))
+                return Py_BuildValue("i", 4);
+            break;
+
+        case IO_METHOD_MMAP:
+        case IO_METHOD_USERPTR:
+            if (!(cap.capabilities & V4L2_CAP_STREAMING))
+                return Py_BuildValue("i", 5);
+            break;
+    }
+
+
+    /* Select video input, video standard and tune here. */
+
+
+    CLEAR (cropcap);
+
+    cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+    if (0 == xioctl (self->fd, VIDIOC_CROPCAP, &cropcap)) {
+        crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        crop.c = cropcap.defrect; /* reset to default */
+
+        if (-1 == xioctl (self->fd, VIDIOC_S_CROP, &crop)) {
+            switch (errno) {
+                case EINVAL:
+                    /* Cropping not supported. */
+                    break;
+                default:
+                    /* Errors ignored. */
+                    break;
+            }
+        }
+    } else {
+            /* Errors ignored. */
+    }
+
+
+    CLEAR (fmt);
+
+    fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    fmt.fmt.pix.width       = 160;
+    fmt.fmt.pix.height      = 120;
+    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+    fmt.fmt.pix.field       = V4L2_FIELD_INTERLACED;
+
+    if (-1 == xioctl (self->fd, VIDIOC_S_FMT, &fmt))
+        return Py_BuildValue("i", 21);
+
+    /* Note VIDIOC_S_FMT may change width and height. */
+
+    /* Buggy driver paranoia. */
+    min = fmt.fmt.pix.width * 2;
+    if (fmt.fmt.pix.bytesperline < min)
+        fmt.fmt.pix.bytesperline = min;
+    min = fmt.fmt.pix.bytesperline * fmt.fmt.pix.height;
+    if (fmt.fmt.pix.sizeimage < min)
+        fmt.fmt.pix.sizeimage = min;
+
+    switch (io) {
+        case IO_METHOD_READ:
+            init_read (fmt.fmt.pix.sizeimage);
+            break;
+
+        case IO_METHOD_MMAP:
+            init_mmap (self);
+            break;
+
+        case IO_METHOD_USERPTR:
+            init_userp (self, fmt.fmt.pix.sizeimage);
+            break;
+    }
+    return Py_BuildValue("i", 0);
+}
+
+
+/* Activate a capture session (camera ON) */
+static PyObject*
+start_capturing (PyDeviceObject *self)
+{
+    unsigned int i;
+    enum v4l2_buf_type type;
+
+    switch (io) {
+        case IO_METHOD_READ:
+            /* Nothing to do. */
+            break;
+
+        case IO_METHOD_MMAP:
+            for (i = 0; i < n_buffers; ++i) {
+                struct v4l2_buffer buf;
+
+                CLEAR (buf);
+
+                buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+                buf.memory      = V4L2_MEMORY_MMAP;
+                buf.index       = i;
+
+                if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf))
+                    return Py_BuildValue("i", 1);
+            }
+
+            type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+            if (-1 == xioctl (self->fd, VIDIOC_STREAMON, &type))
+                return Py_BuildValue("i", 2);
+
+            break;
+
+        case IO_METHOD_USERPTR:
+            for (i = 0; i < n_buffers; ++i) {
+                struct v4l2_buffer buf;
+
+                CLEAR (buf);
+
+                buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+                buf.memory      = V4L2_MEMORY_USERPTR;
+                buf.index       = i;
+                buf.m.userptr   = (unsigned long) buffers[i].start;
+                buf.length      = buffers[i].length;
+
+                if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf))
+                    return Py_BuildValue("i", 11);
+            }
+
+            type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+            if (-1 == xioctl (self->fd, VIDIOC_STREAMON, &type))
+                return Py_BuildValue("i", 21);
+
+            break;
+    }
+    return Py_BuildValue("i", 0);
+}
+
+static PyObject*
+stop_capturing (PyDeviceObject *self)
+{
+    enum v4l2_buf_type type;
+
+    switch (io) {
+        case IO_METHOD_READ:
+            /* Nothing to do. */
+            break;
+
+        case IO_METHOD_MMAP:
+        case IO_METHOD_USERPTR:
+            type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+            if (-1 == xioctl (self->fd, VIDIOC_STREAMOFF, &type))
+                return Py_BuildValue("i", 1);
+
+            break;
+    }
+    return Py_BuildValue("i", 0);
+}
+
+
+
+static PyObject*
+device_uninit (PyDeviceObject *self)
+{
+    unsigned int i;
+
+    switch (io) {
+        case IO_METHOD_READ:
+            free (buffers[0].start);
+            break;
+
+        case IO_METHOD_MMAP:
+            for (i = 0; i < n_buffers; ++i)
+                if (-1 == munmap (buffers[i].start, buffers[i].length))
+                    return Py_BuildValue("i", 1);
+            break;
+
+        case IO_METHOD_USERPTR:
+            for (i = 0; i < n_buffers; ++i)
+                free (buffers[i].start);
+            break;
+    }
+
+    free (buffers);
+
+    return Py_BuildValue("i", 0);
+}
+
+
+
+static PyObject*
+device_close (PyDeviceObject *self)
+{
+    if (-1 == close (self->fd))
+        return Py_BuildValue("i", 1);
+
+    self->fd = -1;
+
+    return Py_BuildValue("i", 0);
+}
+
+
+
+static PyObject*
+device_set (PyDeviceObject *self, PyObject *args)
 {
     char* dev_name = NULL;
 
@@ -91,6 +608,7 @@ device_init (PyDeviceObject *self, PyObject *args)
 
     return Py_BuildValue("i", 0);
 }
+
 
 
 static PyObject*
@@ -116,17 +634,33 @@ device_open (PyDeviceObject *self)
 }
 
 
+
 static PyMethodDef device_methods[] = {
-        /* core */
-        {"initialize", (PyCFunction)device_init, METH_VARARGS,
-         "Initialize given camera Device."},
-         {"openPath", (PyCFunction)device_open, METH_VARARGS,
+        /* core-global */
+        {"setName", (PyCFunction)device_set, METH_VARARGS,
+         "Set Device path for camera Device."},
+        {"openPath", (PyCFunction)device_open, METH_NOARGS,
          "Open given camera Device."},
+        {"initialize", (PyCFunction)device_init, METH_NOARGS,
+         "Initialize given camera Device."},
+        {"startCapture", (PyCFunction)start_capturing, METH_NOARGS,
+         "Start capturing on given camera Device."},
+        {"stopCapture", (PyCFunction)stop_capturing, METH_NOARGS,
+         "Stop capturing on given camera Device."},
+        {"uninitialize", (PyCFunction)device_uninit, METH_NOARGS,
+         "Uninitialize given camera Device."},
+        {"closePath", (PyCFunction)device_close, METH_NOARGS,
+         "Close given camera Device."},
+        /* core-actions */
+        {"readFrame", (PyCFunction)read_frame, METH_NOARGS,
+         "Reads a frame from given camera Device."},
          /* other */
         {"getName", (PyCFunction)device_get_name, METH_NOARGS,
          "Grab dev_name from camera Device."},
         {NULL}
 };
+
+
 
 static PyTypeObject PyDevice_Type = {
     PyObject_HEAD_INIT(NULL)
@@ -157,7 +691,7 @@ static PyTypeObject PyDevice_Type = {
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter           */
     0,                              /* tp_iternext       */
-    device_methods,                   /* tp_methods        */
+    device_methods,                 /* tp_methods        */
     0, //Name_members,                   /* tp_members        */
     0,                              /* tp_getset         */
     0,                              /* tp_base           */
@@ -167,8 +701,6 @@ static PyTypeObject PyDevice_Type = {
     0,                              /* tp_dictoffset     */
     0, //(initproc)device_init,          /* tp_init           */
 };
-
-
 
 
 
