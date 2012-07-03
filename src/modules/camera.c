@@ -64,6 +64,34 @@ int width = 160;
 int height = 120;
 
 
+/*
+ * error related objects
+ *
+ */
+
+/* standard cameramodule python-error */
+static PyObject *CameraError;
+
+/* standard python error object as tuple (err_code, err_msg) */
+static PyObject*
+format_error (int err_code, char *err_msg)
+{
+    return Py_BuildValue("(is)", err_code, err_msg);
+}
+
+/* common error message builder object */
+static char*
+errno_msg (const char * s)
+{
+    char *msg_fmt;
+    char *msg_out;
+
+    msg_fmt = "%s error: %s\n";
+    msg_out = (char*) malloc((strlen(msg_fmt) + 1 + strlen(strerror(errno))) * sizeof(char));
+    sprintf(msg_out, msg_fmt, s, strerror(errno));
+    return msg_out;
+}
+
 
 /*
  * retrieve-data functions (python objects)
@@ -277,21 +305,10 @@ read_frame (PyDeviceObject *self)
     int bright=0;
 
     switch (io) {
+
         case IO_METHOD_READ:
-            if (-1 == read (self->fd, buffers[0].start, buffers[0].length)) {
-                switch (errno) {
-                    case EAGAIN:
-                        return Py_BuildValue("(si)", "errno", 1);
-
-                    case EIO:
-                        /* Could ignore EIO, see spec. */
-                        return Py_BuildValue("(si)", "errno", 3);
-                        /* fall through */
-
-                    default:
-                        return Py_BuildValue("(si)", "errno", 2);
-                }
-            }
+            if (-1 == read (self->fd, buffers[0].start, buffers[0].length))
+                return PyErr_SetFromErrno(CameraError);
 
             bright = process_image (buffers[0].start);
 
@@ -303,27 +320,16 @@ read_frame (PyDeviceObject *self)
             buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
             buf.memory = V4L2_MEMORY_MMAP;
 
-            if (-1 == xioctl (self->fd, VIDIOC_DQBUF, &buf)) {
-                switch (errno) {
-                    case EAGAIN:
-                        return Py_BuildValue("(si)", "errno", 11);
-
-                    case EIO:
-                        /* Could ignore EIO, see spec. */
-                        return Py_BuildValue("(si)", "errno", 13);
-                        /* fall through */
-
-                    default:
-                        return Py_BuildValue("(si)", "errno", 12);
-                }
-            }
+            if (-1 == xioctl (self->fd, VIDIOC_DQBUF, &buf))
+                return PyErr_SetFromErrno(CameraError);
 
             assert (buf.index < n_buffers);
 
             bright = process_image (buffers[buf.index].start);
 
             if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf))
-                return Py_BuildValue("(si)", "errno", 21);
+                return PyErr_SetFromErrno(CameraError);
+
             break;
 
         case IO_METHOD_USERPTR:
@@ -332,20 +338,8 @@ read_frame (PyDeviceObject *self)
             buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
             buf.memory = V4L2_MEMORY_USERPTR;
 
-            if (-1 == xioctl (self->fd, VIDIOC_DQBUF, &buf)) {
-                switch (errno) {
-                    case EAGAIN:
-                        return Py_BuildValue("(si)", "errno", 31);
-
-                    case EIO:
-                        /* Could ignore EIO, see spec. */
-                        return Py_BuildValue("(si)", "errno", 33);
-                        /* fall through */
-
-                    default:
-                        return Py_BuildValue("(si)", "errno", 32);
-                }
-            }
+            if (-1 == xioctl (self->fd, VIDIOC_DQBUF, &buf))
+                return PyErr_SetFromErrno(CameraError);
 
             for (i = 0; i < n_buffers; ++i)
                 if (buf.m.userptr == (unsigned long) buffers[i].start
@@ -357,7 +351,8 @@ read_frame (PyDeviceObject *self)
             bright = process_image ((void *) buf.m.userptr);
 
             if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf))
-                return Py_BuildValue("(si)", "errno", 41);
+                return PyErr_SetFromErrno(CameraError);
+
             break;
     }
     return Py_BuildValue("i", bright);
@@ -374,27 +369,50 @@ device_init (PyDeviceObject *self)
     struct v4l2_format fmt;
     unsigned int min;
 
+    char *msg_fmt;
+    char *errormessage;
+
     if (-1 == xioctl (self->fd, VIDIOC_QUERYCAP, &cap)) {
-        if (EINVAL == errno)
-            return Py_BuildValue("i", 1);
-        else
-            return Py_BuildValue("i", 2);
+        if (EINVAL == errno) {
+            msg_fmt = "'%s' is no V4L2 device\n";
+            errormessage = (char*) malloc((strlen(msg_fmt) + 1 + strlen(self->dev_name)) * sizeof(char));
+            sprintf(errormessage, msg_fmt, self->dev_name);
+            PyErr_SetObject(CameraError, format_error(errno, errormessage));
+            return NULL;
+        } else {
+            PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_QUERYCAP")));
+            return NULL;
+        }
     }
 
     if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-        return Py_BuildValue("i", 3);
+        msg_fmt = "'%s' is no video capture device\n";
+        errormessage = (char*) malloc((strlen(msg_fmt) + 1 + strlen(self->dev_name)) * sizeof(char));
+        sprintf(errormessage, msg_fmt, self->dev_name);
+        PyErr_SetObject(CameraError, format_error(0, errormessage));
+        return NULL;
     }
 
     switch (io) {
         case IO_METHOD_READ:
-            if (!(cap.capabilities & V4L2_CAP_READWRITE))
-                return Py_BuildValue("i", 4);
+            if (!(cap.capabilities & V4L2_CAP_READWRITE)) {
+                msg_fmt = "'%s' does not support read I/O\n";
+                errormessage = (char*) malloc((strlen(msg_fmt) + 1 + strlen(self->dev_name)) * sizeof(char));
+                sprintf(errormessage, msg_fmt, self->dev_name);
+                PyErr_SetObject(CameraError, format_error(0, errormessage));
+                return NULL;
+            }
             break;
 
         case IO_METHOD_MMAP:
         case IO_METHOD_USERPTR:
-            if (!(cap.capabilities & V4L2_CAP_STREAMING))
-                return Py_BuildValue("i", 5);
+            if (!(cap.capabilities & V4L2_CAP_STREAMING)) {
+                msg_fmt = "'%s' does not support streaming I/O\n";
+                errormessage = (char*) malloc((strlen(msg_fmt) + 1 + strlen(self->dev_name)) * sizeof(char));
+                sprintf(errormessage, msg_fmt, self->dev_name);
+                PyErr_SetObject(CameraError, format_error(0, errormessage));
+                return NULL;
+            }
             break;
     }
 
@@ -433,8 +451,10 @@ device_init (PyDeviceObject *self)
     fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
     fmt.fmt.pix.field       = V4L2_FIELD_INTERLACED;
 
-    if (-1 == xioctl (self->fd, VIDIOC_S_FMT, &fmt))
-        return Py_BuildValue("i", 21);
+    if (-1 == xioctl (self->fd, VIDIOC_S_FMT, &fmt)) {
+        PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_S_FMT")));
+        return NULL;
+    }
 
     /* Note VIDIOC_S_FMT may change width and height. */
 
@@ -459,8 +479,10 @@ device_init (PyDeviceObject *self)
             init_userp (self, fmt.fmt.pix.sizeimage);
             break;
     }
-    return Py_BuildValue("i", 0);
+
+    Py_RETURN_NONE;
 }
+
 
 
 /* Activate a capture session (camera ON) */
@@ -485,14 +507,18 @@ start_capturing (PyDeviceObject *self)
                 buf.memory      = V4L2_MEMORY_MMAP;
                 buf.index       = i;
 
-                if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf))
-                    return Py_BuildValue("i", 1);
+                if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf)) {
+                    PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_QBUF")));
+                    return NULL;
+                }
             }
 
             type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-            if (-1 == xioctl (self->fd, VIDIOC_STREAMON, &type))
-                return Py_BuildValue("i", 2);
+            if (-1 == xioctl (self->fd, VIDIOC_STREAMON, &type)) {
+                PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_STREAMON")));
+                return NULL;
+            }
 
             break;
 
@@ -508,20 +534,28 @@ start_capturing (PyDeviceObject *self)
                 buf.m.userptr   = (unsigned long) buffers[i].start;
                 buf.length      = buffers[i].length;
 
-                if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf))
-                    return Py_BuildValue("i", 11);
+                if (-1 == xioctl (self->fd, VIDIOC_QBUF, &buf)) {
+                    PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_QBUF")));
+                    return NULL;
+                }
             }
 
             type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-            if (-1 == xioctl (self->fd, VIDIOC_STREAMON, &type))
-                return Py_BuildValue("i", 21);
+            if (-1 == xioctl (self->fd, VIDIOC_STREAMON, &type)) {
+                PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_STREAMON")));
+                return NULL;
+            }
 
             break;
     }
-    return Py_BuildValue("i", 0);
+
+    Py_RETURN_NONE;
 }
 
+
+
+/* Stop a capture session (camera OFF) */
 static PyObject*
 stop_capturing (PyDeviceObject *self)
 {
@@ -536,12 +570,15 @@ stop_capturing (PyDeviceObject *self)
         case IO_METHOD_USERPTR:
             type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-            if (-1 == xioctl (self->fd, VIDIOC_STREAMOFF, &type))
-                return Py_BuildValue("i", 1);
+            if (-1 == xioctl (self->fd, VIDIOC_STREAMOFF, &type)) {
+                PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_STREAMOFF")));
+                return NULL;
+            }
 
             break;
     }
-    return Py_BuildValue("i", 0);
+
+    Py_RETURN_NONE;
 }
 
 
@@ -558,8 +595,10 @@ device_uninit (PyDeviceObject *self)
 
         case IO_METHOD_MMAP:
             for (i = 0; i < n_buffers; ++i)
-                if (-1 == munmap (buffers[i].start, buffers[i].length))
-                    return Py_BuildValue("i", 1);
+                if (-1 == munmap (buffers[i].start, buffers[i].length)) {
+                    PyErr_SetObject(CameraError, format_error(errno, errno_msg("MUnmap")));
+                    return NULL;
+                }
             break;
 
         case IO_METHOD_USERPTR:
@@ -570,7 +609,7 @@ device_uninit (PyDeviceObject *self)
 
     free (buffers);
 
-    return Py_BuildValue("i", 0);
+    Py_RETURN_NONE;
 }
 
 
@@ -578,12 +617,14 @@ device_uninit (PyDeviceObject *self)
 static PyObject*
 device_close (PyDeviceObject *self)
 {
-    if (-1 == close (self->fd))
-        return Py_BuildValue("i", 1);
+    if (-1 == close (self->fd)) {
+        PyErr_SetObject(CameraError, format_error(errno, errno_msg("Close")));
+        return NULL;
+    }
 
     self->fd = -1;
 
-    return Py_BuildValue("i", 0);
+    Py_RETURN_NONE;
 }
 
 
@@ -594,19 +635,24 @@ device_set (PyDeviceObject *self, PyObject *args)
     char* dev_name = NULL;
 
     if (!PyArg_ParseTuple(args, "s", &dev_name))
-        return Py_BuildValue("i", 1);
+        /* raise PyErr (probably TypeError) */
+        return NULL;
 
-    if (dev_name == NULL)
-        return Py_BuildValue("i", 2);
+    if (dev_name == NULL) {
+        PyErr_SetObject(CameraError, format_error(0, "Generic memory error: unable to set 'dev_name'\n"));
+        return NULL;
+    }
 
     self->dev_name = (char*) malloc((strlen(dev_name) + 1) * sizeof(char));
 
-    if (self->dev_name == NULL)
-        return Py_BuildValue("i", 3);
+    if (self->dev_name == NULL) {
+        PyErr_SetObject(CameraError, format_error(0, "Generic memory error: unable to set 'self->dev_name'\n"));
+        return NULL;
+    }
 
     strcpy(self->dev_name, dev_name);
 
-    return Py_BuildValue("i", 0);
+    Py_RETURN_NONE;
 }
 
 
@@ -615,22 +661,36 @@ static PyObject*
 device_open (PyDeviceObject *self)
 {
     struct stat st;
+    char *msg_fmt;
+    char *errormessage;
 
     if (-1 == stat (self->dev_name, &st)) {
-        return Py_BuildValue("i", 1);
+        msg_fmt = "Cannot identify '%s': %s\n";
+        errormessage = (char*) malloc((strlen(msg_fmt) + 1 + strlen(self->dev_name) + strlen(strerror(errno))) * sizeof(char));
+        sprintf(errormessage, msg_fmt, self->dev_name, strerror(errno));
+        PyErr_SetObject(CameraError, format_error(errno, errormessage));
+        return NULL;
     }
 
     if (!S_ISCHR (st.st_mode)) {
-        return Py_BuildValue("i", 2);
+        msg_fmt = "'%s' is no device\n";
+        errormessage = (char*) malloc((strlen(msg_fmt) + 1 + strlen(self->dev_name)) * sizeof(char));
+        sprintf(errormessage, msg_fmt, self->dev_name);
+        PyErr_SetObject(CameraError, format_error(0, errormessage));
+        return NULL;
     }
 
     self->fd = open (self->dev_name, O_RDWR /* required */ | O_NONBLOCK, 0);
 
     if (-1 == self->fd) {
-        return Py_BuildValue("i", 3);
+        msg_fmt = "Cannot open '%s': %s\n";
+        errormessage = (char*) malloc((strlen(msg_fmt) + 1 + strlen(self->dev_name) + strlen(strerror(errno))) * sizeof(char));
+        sprintf(errormessage, msg_fmt, self->dev_name, strerror(errno));
+        PyErr_SetObject(CameraError, format_error(errno, errormessage));
+        return NULL;
     }
 
-    return Py_BuildValue("i", 0);
+    Py_RETURN_NONE;
 }
 
 
@@ -720,6 +780,10 @@ PyMODINIT_FUNC initcamera (void)
     if (m == NULL)
         return;
 
+    CameraError = PyErr_NewException("cameramodule.CameraError", NULL, NULL);
+    if (CameraError)
+        PyModule_AddObject(m, "Error", CameraError);
+
     Py_INCREF(&PyDevice_Type);
-    PyModule_AddObject(m, "device", (PyObject *)&PyDevice_Type);
+    PyModule_AddObject(m, "Device", (PyObject *)&PyDevice_Type);
 }

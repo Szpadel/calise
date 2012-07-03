@@ -16,37 +16,87 @@
 #    along with Calise.  If not, see <http://www.gnu.org/licenses/>.
 
 import time
+import os
 
-from calise.capture import imaging
+#from calise.capture import imaging
+from calise import camera
+from calise import screenBrightness
 
 
-caliseCapture = imaging()
+#caliseCapture = imaging()
 
 
 def takeScreenshot():
-    caliseCapture.scr_get()
-    return caliseCapture.scr
+    scr = 0.0
+    if os.getenv('DISPLAY'):
+        scr = int(screenBrightness.getDisplayBrightness())
+    return scr
+
+
+cs = None
+class camsense():
+
+    def __init__(self, device='/dev/video0'):
+        self.cameraobj = camera.device()
+        self.cameraobj.setName(device)
+
+    def startCapture(self):
+        self.cameraobj.openPath()
+        self.cameraobj.initialize()
+        self.cameraobj.startCapture()
+
+    def takeFrames(self, number=10.0, interval=0.2):
+        # buffered frame on v4l2 device (first X buffered frames are not
+        # processed)
+        cambuffer = 1
+        camValues = []
+        for x in range(number + 1):
+            startTime = time.time()
+            val = None
+            while val is None:
+                try:
+                    val = self.cameraobj.readFrame()
+                except camera.Error as err:
+                    # except EAGAIN (temporary not available) error. Every cam
+                    # has a maximum certain number of fps available, if called
+                    # too early, EAGAIN is raised
+                    if errno.EAGAIN == err[0]:
+                        time.sleep(0.033)
+                    else:
+                        raise
+            # first frame is buffered-frame so can be few seconds old, it's
+            # simply not included in final array
+            if x != 0:
+                camValues.append(val)
+                if x != (number - 1):
+                    time.sleep(interval - (time.time() - startTime))
+        return camValues
+
+    def stopCapture(self):
+        self.cameraobj.stopCapture()
+        self.cameraobj.uninitialize()
+        self.cameraobj.closePath()
+
 
 
 # Picture taker (depends on gureatoCheck)
 # Takes n frames, one every i secs and returns a list object.
 # number: number of captures to be done each time a "capture" is asked
 # interval: time interval between captures in a single "capture" session
-def takeSomePic(number=7.0, interval=0.5):
-    camValues = []
-    for x in range(int(number)):
-        caliseCapture.cam_get()
-        camValues.append(caliseCapture.amb)
-        if x < number - 1:
-            time.sleep(interval)
-    caliseCapture.stop_cam()
+def takeSomePic(number=10.0, interval=0.2):
+    global cs
+    if cs is None:
+        cs = camsense()
+    cs.startCapture()
+    cv = cs.takeFrames(number, interval)
+    cs.stopCapture()
     while True:
-        newVals = gureatoCheck(camValues)
-        if len(camValues) == len(newVals):
+        nv = gureatoCheck(cv)
+        if len(cv) == len(nv):
             break
         else:
-            camValues = newVals
-    return camValues
+            cv = nv
+    return cv
 
 
 # GURRRREATO CHECKER ONIZUKA
