@@ -1,6 +1,5 @@
 #include <Python.h>
 
-/* #include <structmember.h> */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +40,6 @@ typedef enum {
 
 static io_method io = IO_METHOD_MMAP;
 
-
 struct buffer {
     void * start;
     size_t length;
@@ -54,14 +52,11 @@ typedef struct PyDeviceObject {
     PyObject_HEAD
     char* dev_name;                     /* device path */
     int fd;                             /* opened device */
-    //struct v4l2_capability cap;
-    //struct v4l2_cropcap cropcap;
-    //struct buffer* buffers;
-    //unsigned int n_buffers;
 } PyDeviceObject;
 
 int width = 160;
 int height = 120;
+
 
 
 /*
@@ -93,16 +88,170 @@ errno_msg (const char * s)
 }
 
 
+
 /*
  * retrieve-data functions (python objects)
  *
  */
+
+/* Function COPIED from pygame.camera module, by copied I mean almost char by
+   char */
+PyObject* list_cameras()
+{
+    PyObject* ret_list;
+    PyObject* string;
+
+    char** devices;
+    char* device;
+    int num, i, fd;
+
+    num = 0;
+
+    ret_list = NULL;
+    ret_list = PyList_New (0);
+    if (!ret_list)
+        return NULL;
+
+    devices = (char**) malloc(sizeof(char *)*65);
+
+    device = (char*) malloc(sizeof(char)*13);
+    strcpy(device,"/dev/video");
+    fd = open(device, O_RDONLY);
+    if (fd != -1) {
+        devices[num] = device;
+        num++;
+        device = (char*) malloc(sizeof(char)*13);
+    }
+    close(fd);
+    /* v4l2 cameras can be /dev/video and /dev/video0 to /dev/video63 */
+    for (i = 0; i < 64; i++) {
+        sprintf(device,"/dev/video%d", i);
+        fd = open(device, O_RDONLY);
+        if (fd != -1) {
+            devices[num] = device;
+            num++;
+            device = (char*) malloc(sizeof(char)*13);
+        }
+        close(fd);
+    }
+
+    if (num == 0)
+        free(device);
+
+    for(i = 0; i < num; i++) {
+        string = PyString_FromString(devices[i]);
+        PyList_Append(ret_list, string);
+        free(devices[i]);
+    }
+    free(devices);
+
+    return Py_BuildValue("N", ret_list);
+}
+
+
 
 static PyObject*
 device_get_name (PyDeviceObject *self)
 {
     return Py_BuildValue("N", PyString_FromString(self->dev_name));
 }
+
+
+
+static PyObject*
+query_control (PyDeviceObject *self, PyObject *args)
+{
+    int vcid_less;
+
+    struct v4l2_control vstructrl;
+    struct v4l2_queryctrl vqueryctrl;
+
+    memset (&vqueryctrl, 0, sizeof (vqueryctrl));
+
+    if (!PyArg_ParseTuple(args, "i", &vcid_less))
+        /* raise PyErr (probably TypeError) */
+        return NULL;
+
+    vqueryctrl.id = V4L2_CID_BASE + vcid_less;
+
+    if (-1 == ioctl (self->fd, VIDIOC_QUERYCTRL, &vqueryctrl)) {
+        if (errno != EINVAL) {
+            PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_QUERYCTRL")));
+            return NULL;
+        } else {
+            PyErr_SetObject(CameraError, format_error(errno, "Control is not supported\n"));
+            return NULL;
+        }
+    }
+
+    if (vqueryctrl.flags & V4L2_CTRL_FLAG_DISABLED)
+        Py_RETURN_NONE;
+
+    memset (&vstructrl, 0, sizeof (vstructrl));
+
+    vstructrl.id = vqueryctrl.id;
+
+    if (-1 == ioctl (self->fd, VIDIOC_G_CTRL, &vstructrl)) {
+        if (errno != EINVAL) {
+            PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_G_CTRL")));
+            return NULL;
+        } else {
+            return PyErr_SetFromErrno(CameraError);
+        }
+    }
+
+    Py_BuildValue("(isiiiii)", vqueryctrl.id, vqueryctrl.name, vqueryctrl.minimum, vqueryctrl.maximum, vqueryctrl.step, vqueryctrl.default_value, vstructrl.value);
+}
+
+
+
+static PyObject*
+set_control (PyDeviceObject *self, PyObject *args)
+{
+    int vcid_less;
+    int vcsetting;
+
+    struct v4l2_control vstructrl;
+    struct v4l2_queryctrl vqueryctrl;
+
+    memset (&vqueryctrl, 0, sizeof (vqueryctrl));
+
+    if (!PyArg_ParseTuple(args, "ii", &vcid_less, &vcsetting))
+        /* raise PyErr (probably TypeError) */
+        return NULL;
+
+    vqueryctrl.id = V4L2_CID_BASE + vcid_less;
+
+    if (-1 == ioctl (self->fd, VIDIOC_QUERYCTRL, &vqueryctrl)) {
+        if (errno != EINVAL) {
+            PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_QUERYCTRL")));
+            return NULL;
+        } else {
+            PyErr_SetObject(CameraError, format_error(errno, "Control is not supported\n"));
+            return NULL;
+        }
+    }
+
+    if (vqueryctrl.flags & V4L2_CTRL_FLAG_DISABLED)
+        Py_RETURN_NONE;
+
+    memset (&vstructrl, 0, sizeof (vstructrl));
+
+    vstructrl.id = vqueryctrl.id;
+    vstructrl.value = vcsetting;
+
+    if (-1 == ioctl (self->fd, VIDIOC_S_CTRL, &vstructrl      )) {
+        if (errno != EINVAL) {
+            PyErr_SetObject(CameraError, format_error(errno, errno_msg("VIDIOC_S_CTRL")));
+            return NULL;
+        } else {
+            return PyErr_SetFromErrno(CameraError);
+        }
+    }
+
+    Py_RETURN_NONE;
+}
+
 
 
 /*
@@ -717,6 +866,10 @@ static PyMethodDef device_methods[] = {
          /* other */
         {"getName", (PyCFunction)device_get_name, METH_NOARGS,
          "Grab dev_name from camera Device."},
+        {"queryCtrl", (PyCFunction)query_control, METH_VARARGS,
+         "Query given camera Device's control idx."},
+        {"setCtrl", (PyCFunction)set_control, METH_VARARGS,
+         "Set given camera Device's control idx."},
         {NULL}
 };
 
@@ -764,6 +917,14 @@ static PyTypeObject PyDevice_Type = {
 
 
 
+static PyMethodDef camera_methods[] = {
+    {"listDevices", (PyCFunction)list_cameras, METH_NOARGS,
+    "List available v4l2 cameras."},
+    {NULL}
+};
+
+
+
 PyMODINIT_FUNC initcamera (void)
 {
     PyObject* m;
@@ -775,7 +936,7 @@ PyMODINIT_FUNC initcamera (void)
     if (PyType_Ready(&PyDevice_Type) < 0)
         return;
 
-    m = Py_InitModule3("camera", NULL,
+    m = Py_InitModule3("camera", camera_methods,
                        "Example module that creates an extension type.");
     if (m == NULL)
         return;
@@ -787,3 +948,5 @@ PyMODINIT_FUNC initcamera (void)
     Py_INCREF(&PyDevice_Type);
     PyModule_AddObject(m, "Device", (PyObject *)&PyDevice_Type);
 }
+
+

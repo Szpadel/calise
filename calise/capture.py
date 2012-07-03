@@ -18,10 +18,10 @@
 import os
 import sys
 import Image
-from pygame import camera, image
 import signal
 import threading
 
+from calise import camera
 from calise import screenBrightness
 
 
@@ -34,31 +34,32 @@ from calise import screenBrightness
 class imaging():
 
     def __init__(self):
-        self.__cam = None   # pygame camera object
-        self.cams = None    # available cameras
-        self.__app = None   # QtApplication for screenshot
-        self.webcam = None  # camera path (eg /dev/video)
-        self.amb = None     # ambient brightness 0 < 255
-        self.scr = None     # screen brightness 0 < 255
+        self.cameraobj = None  # v4l2 camera object
+        self.cams = None       # available cameras
+        self.webcam = None     # camera path (eg /dev/video)
+        self.amb = None        # ambient brightness 0 < 255
+        self.scr = None        # screen brightness 0 < 255
 
     # defines the camera to be used, path has to be a valid device path like
     # '/dev/video', if no path is given, first cam on pyGame cam list is taken
     def set_cam(self, path=None, auto=True):
-        camera.init()
-        cam_list = camera.list_cameras()
+        cam_list = camera.listDevices()
         if cam_list.count(str(path)) > 0:
             webcam = path
         else:
             webcam = cam_list[0]
         self.cams = cam_list
         self.webcam = webcam
+        self.cameraobj = camera.Device()
+        self.cameraobj.setName(self.webcam)
         if auto is True:
             self.start_cam()
 
     # initializes the pygame camera capture
     def start_cam(self, x=160, y=120):
-        self.__cam = camera.Camera(self.webcam, (x, y))
-        self.__cam.start()
+        self.cameraobj.openPath()
+        self.cameraobj.initialize()
+        self.cameraobj.startCapture()
 
     # takes one image from the camera and calls image processor, finally
     # obtains %amb (ambient brightness in /255)
@@ -68,29 +69,29 @@ class imaging():
     # pyGame infinite process lock bug
     #
     def cam_get(self, path=None, x=160, y=120):
-        if not self.__cam:
+        if not self.cameraobj:
             self.set_cam(path, auto=False)
             self.start_cam(x, y)
-        t = threading.Timer(5.0, self.KillFunction)
-        t.start()
-        self.rawim = self.__cam.get_image()
-        t.cancel()
-        sim = image.tostring(self.rawim, 'RGB')
-        del self.rawim
-        self.amb = self.imgproc((x, y), sim)
-
-    # simply force kills if timer triggered
-    def KillFunction(self):
-        print "\n  ====  BLOCKED  ====  \r"
-        import signal
-        os.kill(os.getpid(), signal.SIGKILL)
+        for x in range(2):
+            val = None
+            while val is None:
+                try:
+                    val = a.readFrame();
+                except camera.Error as err:
+                    if errno.EAGAIN == err[0]:
+                        time.sleep(0.033)
+                    else:
+                        raise
+            if x != 0:
+                self.amb = val
 
     # unload the camera object
     def stop_cam(self):
-        if self.__cam:
-            self.__cam.stop()
-            self.__cam = None
-            camera.quit()
+        if self.cameraobj:
+            self.cameraobj.stopCapture()
+            self.cameraobj.uninitialize()
+            self.cameraobj.closePath()
+            self.cameraobj = None
 
     # obtains %scr (screen brightness in /255)
     def scr_get(self):
@@ -98,22 +99,3 @@ class imaging():
             self.scr = int(screenBrightness.getDisplayBrightness())
         else:
             self.scr = 0.0
-
-    # processes a with,heigth,bytecdode input image and returns its average
-    # brightness
-    def imgproc(self, strsz=tuple, string=str, re_size=None, mode='RGB'):
-        if re_size:
-            if type(re_size) != tuple:
-                raise TypeError("need tuple, %s found" % (type(re_size)))
-        im = Image.fromstring(mode, (strsz[0], strsz[1]), string)
-        if strsz[1] > 3:
-            aspect = float(strsz[0]) / float(strsz[1])
-            strsz = int(aspect * 3), 3
-        im = im.resize((strsz[0], strsz[1]), Image.NEAREST)
-        pix = im.load()
-        lit = []
-        for px in range(strsz[0]):
-            for py in range(strsz[1]):
-                (r, g, b) = (pix[px, py])
-                lit.append(.299 * r + .587 * g + .114 * b)
-        return sum(lit) / len(lit)
