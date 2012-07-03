@@ -19,7 +19,8 @@ import os
 import sys
 import Image
 import signal
-import threading
+import errno
+import time
 
 from calise import camera
 from calise import screenBrightness
@@ -76,7 +77,7 @@ class imaging():
             val = None
             while val is None:
                 try:
-                    val = a.readFrame();
+                    val = self.cameraobjreadFrame();
                 except camera.Error as err:
                     if errno.EAGAIN == err[0]:
                         time.sleep(0.033)

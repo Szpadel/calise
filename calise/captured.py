@@ -17,6 +17,7 @@
 
 import time
 import os
+import errno
 
 #from calise.capture import imaging
 from calise import camera
@@ -37,7 +38,7 @@ cs = None
 class camsense():
 
     def __init__(self, device='/dev/video0'):
-        self.cameraobj = camera.device()
+        self.cameraobj = camera.Device()
         self.cameraobj.setName(device)
 
     def startCapture(self):
