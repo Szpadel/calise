@@ -67,15 +67,18 @@ class _MainLoop():
                 return True
             # PAUSE / RESUME
             elif self.sig == 'pause':
-                self.step0.stop_cam()
+                self.step0.stopCapture()
                 if not arguments.verbosity:
                     sys.stdout.write('\n  =====  PAUSE  =====  \r')
                     sys.stdout.flush()
                 while self.sig is not 'resume':
-                    if self.sig == 'quit': return True
-                    elif self.sig == 'export': WriteLog(); self.sig='pause'
+                    if self.sig == 'quit':
+                        return True
+                    elif self.sig == 'export':
+                        WriteLog(); self.sig='pause'
                     sleep(0.01)
-                if self.sig is not 'quit': self.step0.set_cam()
+                if self.sig is not 'quit':
+                    self.step0.startCapture()
             # EXPORT
             elif self.sig == 'export':
                 self.WriteLog()
@@ -140,18 +143,20 @@ class _MainLoop():
         )
         self.lock = _locker()
         self.basetime = time() - self.sct
+        self.step0.initializeCamera(arguments.cam)
+        self.step0.startCapture()
+        self.step0.cameraObj.readFrame()
         while True:
             self.timeref = time() # start time of the loop
-            self.step0.cam_get(arguments.cam)
+            self.step0.amb = self.step0.cameraObj.readFrame()
             if (
-                ( arguments.screen is True ) and
-                ( self.basetime + self.sct <= time() ) and
-                ( os.getenv('DISPLAY') is not None )
-            ):
+                arguments.screen is True and
+                self.basetime + self.sct <= time()
+                ):
                 self.step0.scr_get()
                 self.basetime = time()
             elif arguments.screen is None:
-                self.step0.scr = 160
+                self.step0.scr = 0.0
             self.step1.elaborate(self.step0.amb,self.step0.scr)
             if (
                 ( arguments.auto ) and
@@ -210,8 +215,10 @@ class _MainLoop():
             sys.stdout.flush()
 
             self.lock.check()
-            if self.drowsiness() is True: break
-        self.step0.stop_cam()
+            if self.drowsiness() is True:
+                break
+        self.step0.stopCapture()
+        self.step0.freeCameraObj()
 
 
 class _locker():

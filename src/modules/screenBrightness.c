@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <X11/Xlib.h>
 
-/* functions available to pygame users */
+/* functions available to module users */
 static PyObject* getDisplayBrightness (PyObject* self);
 
 /* functions for internal use */

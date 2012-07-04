@@ -21,6 +21,7 @@
 
 
 
+
 static int
 xioctl (int fd, int request, void * arg)
 {
@@ -38,7 +39,7 @@ typedef enum {
     IO_METHOD_USERPTR,
 } io_method;
 
-static io_method io = IO_METHOD_MMAP;
+static io_method io = IO_METHOD_READ;
 
 struct buffer {
     void * start;
@@ -50,8 +51,8 @@ static unsigned int n_buffers = 0;
 
 typedef struct PyDeviceObject {
     PyObject_HEAD
-    char* dev_name;                     /* device path */
-    int fd;                             /* opened device */
+    char* dev_name;  // device path
+    int fd;          // opened device
 } PyDeviceObject;
 
 int width = 160;
@@ -59,27 +60,48 @@ int height = 120;
 
 
 
-/*
- * error related objects
- *
- */
 
 /* standard cameramodule python-error */
-static PyObject *CameraError;
+static PyObject* CameraError;
 
-/* standard python error object as tuple (err_code, err_msg) */
+/* functions available to module users */
+static PyObject* list_cameras();
+static PyObject* device_set (PyDeviceObject *self, PyObject *args);
+static PyObject* device_open (PyDeviceObject *self);
+static PyObject* device_get_name (PyDeviceObject *self);
+static PyObject* query_control (PyDeviceObject *self, PyObject *args);
+static PyObject* set_control (PyDeviceObject *self, PyObject *args);
+static PyObject* device_init (PyDeviceObject *self);
+static PyObject* start_capturing (PyDeviceObject *self);
+static PyObject* read_frame (PyDeviceObject *self);
+static PyObject* stop_capturing (PyDeviceObject *self);
+static PyObject* device_uninit (PyDeviceObject *self);
+static PyObject* device_close (PyDeviceObject *self);
+
+/* internal/other functions */
+static int init_read (unsigned int buffer_size);
+static int init_mmap (PyDeviceObject *self);
+static int init_userp (PyDeviceObject *self, unsigned int buffer_size);
+static int process_image(const void* p);
+static PyObject* format_error (int err_code, char* err_msg);
+static char* errno_msg (const char* s);
+
+
+
+
+// standard python error object as tuple (err_code, err_msg)
 static PyObject*
-format_error (int err_code, char *err_msg)
+format_error (int err_code, char* err_msg)
 {
     return Py_BuildValue("(is)", err_code, err_msg);
 }
 
-/* common error message builder object */
+// common error message builder object
 static char*
-errno_msg (const char * s)
+errno_msg (const char* s)
 {
-    char *msg_fmt;
-    char *msg_out;
+    char* msg_fmt;
+    char* msg_out;
 
     msg_fmt = "%s error: %s\n";
     msg_out = (char*) malloc((strlen(msg_fmt) + 1 + strlen(strerror(errno))) * sizeof(char));
@@ -89,14 +111,9 @@ errno_msg (const char * s)
 
 
 
-/*
- * retrieve-data functions (python objects)
- *
- */
 
-/* Function COPIED from pygame.camera module, by copied I mean almost char by
-   char */
-PyObject* list_cameras()
+// Function COPIED from pygame.camera module almost char by char (thx guys)
+static PyObject* list_cameras()
 {
     PyObject* ret_list;
     PyObject* string;
@@ -149,7 +166,7 @@ PyObject* list_cameras()
 }
 
 
-
+// get device name from PyDeviceObject
 static PyObject*
 device_get_name (PyDeviceObject *self)
 {
@@ -157,10 +174,16 @@ device_get_name (PyDeviceObject *self)
 }
 
 
-
 static PyObject*
 query_control (PyDeviceObject *self, PyObject *args)
 {
+/*
+    query control data and return as tuple.
+
+    Syntax: query_control(X) where X is an integer from 0 to 42
+    X is then added to V4L2_CID_BASE to obtain requested control.id
+
+*/
     int vcid_less;
 
     struct v4l2_control vstructrl;
@@ -202,7 +225,6 @@ query_control (PyDeviceObject *self, PyObject *args)
 
     Py_BuildValue("(isiiiii)", vqueryctrl.id, vqueryctrl.name, vqueryctrl.minimum, vqueryctrl.maximum, vqueryctrl.step, vqueryctrl.default_value, vstructrl.value);
 }
-
 
 
 static PyObject*
@@ -254,11 +276,8 @@ set_control (PyDeviceObject *self, PyObject *args)
 
 
 
-/*
- * core functions (non-python objects)
- *
- */
 
+// Convert YUV input image to rgb and compute its brightness
 static int process_image(const void* p)
 {
     int line, column;
@@ -268,14 +287,13 @@ static int process_image(const void* p)
     int bri=0;
 
     /* debugging lines (uncomment all debug lines inside the function to
-     * proper debug)
-     *
-     * int cr, cg, cb;
-     *
-     * FILE *fp;
-     * fp = fopen( "/tmp/zacchetepaffete.log", "wb" );
-     *
-     */
+       proper debug)
+
+       int cr, cg, cb;
+
+       FILE *fp;
+       fp = fopen( "/tmp/zacchetepaffete.log", "wb" );
+    */
 
     /* In this format each four bytes is two pixels. Each four bytes is two Y's, a Cb and a Cr.
        Each Y goes to one of* the pixels, and the Cb and Cr belong to both pixels. */
@@ -293,16 +311,15 @@ static int process_image(const void* p)
             b += CLIP((double)*py + 1.772*((double)*pu-128.0));
 
             /* debugging lines
-             *
-             * cr = CLIP((double)*py + 1.402*((double)*pv-128.0));
-             * cg = CLIP((double)*py - 0.344*((double)*pu-128.0) - 0.714*((double)*pv-128.0));
-             * cb = CLIP((double)*py + 1.772*((double)*pu-128.0));
-             * fprintf(fp, "%d:%d rgb(%d,%d,%d)\n", column + 1, line + 1, cr, cg, cb);
-             * r += cr;
-             * g += cg;
-             * b += cb;
-             *
-             */
+
+               cr = CLIP((double)*py + 1.402*((double)*pv-128.0));
+               cg = CLIP((double)*py - 0.344*((double)*pu-128.0) - 0.714*((double)*pv-128.0));
+               cb = CLIP((double)*py + 1.772*((double)*pu-128.0));
+               fprintf(fp, "%d:%d rgb(%d,%d,%d)\n", column + 1, line + 1, cr, cg, cb);
+               r += cr;
+               g += cg;
+               b += cb;
+            */
 
             // increase py every time
             py += 2;
@@ -322,18 +339,22 @@ static int process_image(const void* p)
     bri = 0.299 * r + 0.587 * g + 0.114 * b;
 
     /* debugging lines
-     *
-     * fprintf(fp, "\n");
-     * fprintf(fp, "area: %f\n", area);
-     * fprintf(fp, "brightness: %d\n", bri);
-     * fclose(fp);
-     *
-     */
+
+       fprintf(fp, "\n");
+       fprintf(fp, "area: %f\n", area);
+       fprintf(fp, "brightness: %d\n", bri);
+       fclose(fp);
+    */
 
     return bri;
 }
 
 
+
+
+/* 'init_read', 'init_mmap' and 'init_userp' are currently not debugged
+   functions (unstable).
+   Never had errors so far but if any, something can hung-up */
 static int
 init_read (unsigned int buffer_size)
 {
@@ -348,7 +369,6 @@ init_read (unsigned int buffer_size)
     if (!buffers[0].start)
         return 2;
 }
-
 
 static int
 init_mmap (PyDeviceObject *self)
@@ -401,7 +421,6 @@ init_mmap (PyDeviceObject *self)
     }
 }
 
-
 static int
 init_userp (PyDeviceObject *self, unsigned int buffer_size)
 {
@@ -440,11 +459,6 @@ init_userp (PyDeviceObject *self, unsigned int buffer_size)
 
 
 
-
-/*
- * core functions (python objects)
- *
- */
 
 static PyObject*
 read_frame (PyDeviceObject *self)
@@ -508,7 +522,6 @@ read_frame (PyDeviceObject *self)
 }
 
 
-
 static PyObject*
 device_init (PyDeviceObject *self)
 {
@@ -565,9 +578,7 @@ device_init (PyDeviceObject *self)
             break;
     }
 
-
     /* Select video input, video standard and tune here. */
-
 
     CLEAR (cropcap);
 
@@ -590,7 +601,6 @@ device_init (PyDeviceObject *self)
     } else {
             /* Errors ignored. */
     }
-
 
     CLEAR (fmt);
 
@@ -631,7 +641,6 @@ device_init (PyDeviceObject *self)
 
     Py_RETURN_NONE;
 }
-
 
 
 /* Activate a capture session (camera ON) */
@@ -703,7 +712,6 @@ start_capturing (PyDeviceObject *self)
 }
 
 
-
 /* Stop a capture session (camera OFF) */
 static PyObject*
 stop_capturing (PyDeviceObject *self)
@@ -729,7 +737,6 @@ stop_capturing (PyDeviceObject *self)
 
     Py_RETURN_NONE;
 }
-
 
 
 static PyObject*
@@ -762,7 +769,6 @@ device_uninit (PyDeviceObject *self)
 }
 
 
-
 static PyObject*
 device_close (PyDeviceObject *self)
 {
@@ -775,7 +781,6 @@ device_close (PyDeviceObject *self)
 
     Py_RETURN_NONE;
 }
-
 
 
 static PyObject*
@@ -803,7 +808,6 @@ device_set (PyDeviceObject *self, PyObject *args)
 
     Py_RETURN_NONE;
 }
-
 
 
 static PyObject*
@@ -844,36 +848,41 @@ device_open (PyDeviceObject *self)
 
 
 
+
 static PyMethodDef device_methods[] = {
-        /* core-global */
-        {"setName", (PyCFunction)device_set, METH_VARARGS,
-         "Set Device path for camera Device."},
-        {"openPath", (PyCFunction)device_open, METH_NOARGS,
-         "Open given camera Device."},
-        {"initialize", (PyCFunction)device_init, METH_NOARGS,
-         "Initialize given camera Device."},
-        {"startCapture", (PyCFunction)start_capturing, METH_NOARGS,
-         "Start capturing on given camera Device."},
-        {"stopCapture", (PyCFunction)stop_capturing, METH_NOARGS,
-         "Stop capturing on given camera Device."},
-        {"uninitialize", (PyCFunction)device_uninit, METH_NOARGS,
-         "Uninitialize given camera Device."},
-        {"closePath", (PyCFunction)device_close, METH_NOARGS,
-         "Close given camera Device."},
-        /* core-actions */
-        {"readFrame", (PyCFunction)read_frame, METH_NOARGS,
-         "Reads a frame from given camera Device."},
-         /* other */
-        {"getName", (PyCFunction)device_get_name, METH_NOARGS,
-         "Grab dev_name from camera Device."},
-        {"queryCtrl", (PyCFunction)query_control, METH_VARARGS,
-         "Query given camera Device's control idx."},
-        {"setCtrl", (PyCFunction)set_control, METH_VARARGS,
-         "Set given camera Device's control idx."},
-        {NULL}
+    /* core-global */
+    {"setName", (PyCFunction)device_set, METH_VARARGS,
+     "Set Device path for camera Device."},
+    {"openPath", (PyCFunction)device_open, METH_NOARGS,
+     "Open given camera Device."},
+    {"initialize", (PyCFunction)device_init, METH_NOARGS,
+     "Initialize given camera Device."},
+    {"startCapture", (PyCFunction)start_capturing, METH_NOARGS,
+     "Start capturing on given camera Device."},
+    {"stopCapture", (PyCFunction)stop_capturing, METH_NOARGS,
+     "Stop capturing on given camera Device."},
+    {"uninitialize", (PyCFunction)device_uninit, METH_NOARGS,
+     "Uninitialize given camera Device."},
+    {"closePath", (PyCFunction)device_close, METH_NOARGS,
+     "Close given camera Device."},
+    /* core-action */
+    {"readFrame", (PyCFunction)read_frame, METH_NOARGS,
+     "Reads a frame from given camera Device."},
+    /* other */
+    {"getName", (PyCFunction)device_get_name, METH_NOARGS,
+     "Grab dev_name from camera Device."},
+    {"queryCtrl", (PyCFunction)query_control, METH_VARARGS,
+     "Query given camera Device's control idx."},
+    {"setCtrl", (PyCFunction)set_control, METH_VARARGS,
+     "Set given camera Device's control idx."},
+    {NULL}
 };
 
-
+static PyMethodDef gmodule_methods[] = {
+    {"listDevices", (PyCFunction)list_cameras, METH_NOARGS,
+     "List available v4l2 cameras."},
+    {NULL}
+};
 
 static PyTypeObject PyDevice_Type = {
     PyObject_HEAD_INIT(NULL)
@@ -915,16 +924,6 @@ static PyTypeObject PyDevice_Type = {
     0, //(initproc)device_init,          /* tp_init           */
 };
 
-
-
-static PyMethodDef camera_methods[] = {
-    {"listDevices", (PyCFunction)list_cameras, METH_NOARGS,
-    "List available v4l2 cameras."},
-    {NULL}
-};
-
-
-
 PyMODINIT_FUNC initcamera (void)
 {
     PyObject* m;
@@ -936,7 +935,7 @@ PyMODINIT_FUNC initcamera (void)
     if (PyType_Ready(&PyDevice_Type) < 0)
         return;
 
-    m = Py_InitModule3("camera", camera_methods,
+    m = Py_InitModule3("camera", gmodule_methods,
                        "Example module that creates an extension type.");
     if (m == NULL)
         return;
@@ -948,5 +947,3 @@ PyMODINIT_FUNC initcamera (void)
     Py_INCREF(&PyDevice_Type);
     PyModule_AddObject(m, "Device", (PyObject *)&PyDevice_Type);
 }
-
-
