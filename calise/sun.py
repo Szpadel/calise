@@ -131,7 +131,7 @@ def url_parse(lat, lon, parser='wunderground'):
             ".*?<condition data=\"([A-Z a-z]*?)\"/>"
             ".*?</xml_api_reply>"), re.DOTALL)
     try:
-        wur = urllib.urlopen('http://%s?%s' % (api, params))
+        wur = urllib.urlopen('https://%s?%s' % (api, params))
     # IOError is raised if there's no internet connection
     except IOError:
         return None
@@ -170,6 +170,7 @@ def get_daytime_mul(lat, lon):
             'cloudy': minimum + step * 2,
             'overcast': minimum + step * 1,
             # Others
+            'scattered clouds': minimum + step * 5,
             'chance of rain': minimum + step * 3,
             'light rain': minimum + step * 2,
             'rain': minimum + step * 1,
@@ -191,3 +192,22 @@ def get_daytime_mul(lat, lon):
     else:
         logger.warning("weather condition not found, mul set to %.3f" % fmul)
     return fmul
+
+
+def get_geo():
+    geo = None
+    api = 'geoiplookup.wikimedia.org'
+    try:
+        gur = urllib.urlopen('https://%s' % api)
+    except IOError:
+        return None
+    try:
+        geo = eval(gur.read().replace("Geo = ", ""))
+        geo['lat'] = float(geo['lat'])
+        geo['lon'] = float(geo['lon'])
+        logger.debug(
+            "geoip lookup successed: \"%s\" (%.3f,%.3f)"
+            % (geo['city'], geo['lat'], geo['lon']))
+    except SyntaxError:
+        logger.warning("geoip lookup failed")
+    return geo

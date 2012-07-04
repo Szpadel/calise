@@ -21,7 +21,7 @@ import logging
 
 from calise.system import computation
 from calise.capture import imaging, processList
-from calise.sun import getSun, get_daytime_mul
+from calise.sun import getSun, get_daytime_mul, get_geo
 from calise.infos import __LowerName__
 
 
@@ -36,6 +36,7 @@ class objects():
         self.oldies = []
         self.resetComers()
         self.wts = None  # weather timestamp
+        self.gts = None  # geoip timestamp
         self.capture = imaging()
         self.capture.initializeCamera(self.arguments['cam'])
 
@@ -219,6 +220,21 @@ class objects():
             return 0
         return 1
 
+    # get geoip informations, updates only once every 30 minutes
+    def getGeo(self, cur=None):
+        if cur is None:
+            cur = time.time()
+        if self.gts is None or cur - self.gts > 1800:
+            self.gts = time.time()
+            geo = get_geo()
+            if geo:
+                self.arguments['latitude'] = geo['lat']
+                self.arguments['longitude'] = geo['lon']
+                return 0
+            else:
+                return 2
+        return 1
+
     def autoWrite(self):
         # assign increasing values (refer to writeStep for further info)
         if self.newcomers['css'] == "dawn":
@@ -237,7 +253,7 @@ class objects():
     calise.sun module, discovers current time of the day and sets sleep time
     before a new capture and increasing/decreasing writeStep args accordingly
     """
-    def executer(self, execute=True, wcheck=False, ctime=None):
+    def executer(self, execute=True, ctime=None):
 
         if not self.newcomers['cts']:
             self.getCts()
@@ -245,6 +261,29 @@ class objects():
             cur_time = time.time()
         else:
             cur_time = ctime
+        capture_time = self.arguments['capnum'] * self.arguments['capint']
+        if self.arguments['geoip']:
+            self.getGeo()
+
+        if (
+            not self.arguments.keys().count('latitude') or
+            not self.arguments.keys().count('longitude') or
+            self.arguments['latitude'] is None or
+            self.arguments['longitude'] is None
+        ):
+            arbSlpVal = 90.0
+            self.logger.warning(
+                "Not able to geolocate, setting arbitrary sleeptime value: %d"
+                % arbSlpVal)
+            self.newcomers['css'] = None
+            self.newcomers['nss'] = None
+            self.newcomers['slp'] = arbSlpVal
+            if execute:
+                self.autoWrite()
+            else:
+                self.getSbs()
+            return arbSlpVal - capture_time + cur_time
+
         sun = getSun(
             self.arguments['latitude'], self.arguments['longitude'])
         daw = float(sun[0])
@@ -270,7 +309,9 @@ class objects():
             self.newcomers['nss'] = None
             if execute:
                 self.autoWrite()
-            if wcheck:
+            else:
+                self.getSbs()
+            if self.arguments['weather']:
                 self.getWtr(cur_time)
             else:
                 self.daytime_mul = 0.6
@@ -284,6 +325,8 @@ class objects():
             self.newcomers['nss'] = None
             if execute:
                 self.autoWrite()
+            else:
+                self.getSbs()
             sleepTime = (
                 int(datetime.date.today().strftime("%s")) + 86400 - cur_time)
         # happens on artic regions, where the sun never reaches 15 degrees
@@ -304,6 +347,8 @@ class objects():
             self.newcomers['nss'] = daw + daw_tw - cur_time
             if execute:
                 self.autoWrite()
+            else:
+                self.getSbs()
             sleepTime = daw_sl
         # sunset
         elif cur_time >= sus - sus_tw and cur_time < sus:
@@ -311,6 +356,8 @@ class objects():
             self.newcomers['nss'] = sus - cur_time
             if execute:
                 self.autoWrite()
+            else:
+                self.getSbs()
             sleepTime = sus_sl
         # night
         elif cur_time > sus or cur_time < daw:
@@ -324,6 +371,8 @@ class objects():
             self.newcomers['nss'] = daw - cur_time
             if execute:
                 self.autoWrite()
+            else:
+                self.getSbs()
             sleepTime = daw - cur_time
         # day
         else:
@@ -331,7 +380,9 @@ class objects():
             self.newcomers['nss'] = sus - sus_tw - cur_time
             if execute:
                 self.autoWrite()
-            if wcheck:
+            else:
+                self.getSbs()
+            if self.arguments['weather']:
                 self.getWtr(cur_time)
             else:
                 self.daytime_mul = 0.6
@@ -340,7 +391,6 @@ class objects():
                 sleepTime = self.newcomers['nss']
 
         self.newcomers['slp'] = sleepTime
-        capture_time = self.arguments['capnum'] * self.arguments['capint']
         if sleepTime < capture_time + 1.0:
             return capture_time + 1.0 + cur_time
         else:

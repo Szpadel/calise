@@ -75,9 +75,6 @@ class whatsmyname(threading.Thread):
         # control "flags"
         self.stop = False
         self.pause = False
-        # exec-options
-        # TODO: move weather to settings
-        self.weather = True
         # threading.Thread initialization
         threading.Thread.__init__(self)
 
@@ -85,8 +82,7 @@ class whatsmyname(threading.Thread):
         self.logger.info("Main Thread successfully started")
         while self.stop is False:
             self.objectClass.resetComers()
-            self.cycle_sleeptime = self.objectClass.executer(
-                wcheck=self.weather)
+            self.cycle_sleeptime = self.objectClass.executer()
             self.objectClass.append_data()
             self.event_logger()
             # the cycle below sleeps Nth time for 1 sec and meanwhile checks
@@ -109,6 +105,7 @@ class whatsmyname(threading.Thread):
         objc = self.objectClass
         if len(objc.oldies) == 1:
             if objc.oldies[-1]['cbs'] != self.cbs:
+                print objc.oldies[-1]['cbs'], self.cbs
                 self.logger.info(
                     "Backlight step changed from %d to %d"
                     % (self.cbs, objc.oldies[-1]['cbs']))
@@ -466,9 +463,14 @@ class methodHandler():
     # TODO: simplify removing actual key names
     def setTh(self, idx, value):
         retCode = 0
-        if idx in ['weather']:
+        if idx in ['geoip']:
             value = strToBool(value)
-            self.th.weather = value
+            self.settings['geoip'] = value
+            self.th.objectClass.arguments['geoip'] = value
+        elif idx in ['weather']:
+            value = strToBool(value)
+            self.settings['weather'] = value
+            self.th.objectClass.arguments['weather'] = value
         elif idx in ['latitude']:
             value = float(value)
             self.settings['latitude'] = value

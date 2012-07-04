@@ -31,6 +31,20 @@ queryCommands = ['dump', 'dumpall', 'dumpsettings', 'check']
 serviceCommands = execCommands + queryCommands
 logger = logging.getLogger('.'.join([__LowerName__, 'options']))
 
+# Default settings
+defaults = {
+    'capnum': 12,
+    'capint': .2,
+    'loglevel': 'info',
+    'logfile': None,
+    'geoip': True,
+    'weather': True,
+}
+
+
+def getDefaultSettings():
+    return defaults
+
 
 def get_path(pname='default', sufx='.conf'):
     # yield system-wide profile first
@@ -163,11 +177,19 @@ class serviceGetArgs():
         parser.add_argument(
             '--weather',
             action='store_true', default=None, dest='yweather',
-            help="enable internet weather check")
+            help="enable weather internet lookup")
         parser.add_argument(
             '--no-weather',
             action='store_true', default=None, dest='nweather',
-            help="disable internet weather check")
+            help="disable weather internet lookup")
+        parser.add_argument(
+            '--geoip',
+            action='store_true', default=None, dest='ygeoip',
+            help="enable geoip internet lookup")
+        parser.add_argument(
+            '--no-geoip',
+            action='store_true', default=None, dest='ngeoip',
+            help="disable geoip internet lookup")
         # Logging
         parser.add_argument(
             '--loglevel',
@@ -222,6 +244,10 @@ class serviceGetArgs():
             settings['weather'] = True
         elif args['nweather']:
             settings['weather'] = False
+        if args['ygeoip']:
+            settings['geoip'] = True
+        elif args['ngeoip']:
+            settings['geoip'] = False
         # Logging related arguments
         if args['loglevel']:
             settings['loglevel'] = args['loglevel']
@@ -262,6 +288,7 @@ class profiler():
             'longitude': (float, 'longitude'),
             'capnum': (int, 'capnum'),
             'capint': (float, 'capint'),
+            'geoip': (bool, 'geoip'),
             'weather': (bool, 'weather'),
             },
         'Daemon': {
@@ -269,6 +296,7 @@ class profiler():
             'longitude': (float, 'longitude'),
             'capnum': (int, 'capnum'),
             'capint': (float, 'capint'),
+            'geoip': (bool, 'geoip'),
             'weather': (bool, 'weather'),
         },
         'Advanced': {

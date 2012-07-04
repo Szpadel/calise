@@ -192,6 +192,11 @@ def checkSettingsArguments(defDict):
         del options.settings['logfile']
     if not options.settings.keys().count('logfile'):
         options.settings['logfile'] = defDict['logfile']
+    # geoip and weather lookup set True by default
+    if not options.settings.keys().count('geoip'):
+        options.settings['geoip'] = defDict['geoip']
+    if not options.settings.keys().count('weather'):
+        options.settings['weather'] = defDict['weather']
 
 
 # Check for missing necessary settings
@@ -239,13 +244,9 @@ def mainService(kargs):
     tempdir = tempfile.mkdtemp(prefix='%s-' % __LowerName__)
     logObject = tempfile.NamedTemporaryFile(
         prefix='%s-' % os.path.join(tempdir, __LowerName__), delete=False)
-    # Default settings
-    defaults = {
-        'capnum': 10,
-        'capint': .2,
-        'loglevel': 'info',
-        'logfile': logObject.name,
-    }
+    # setting-related operations
+    defaults = options.getDefaultSettings()
+    defaults['logfile'] = logObject.name
     logLevel = defaults['loglevel']
     logFile = defaults['logfile']
     lg = options.wlogger(logLevel, logFile)

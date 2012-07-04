@@ -24,14 +24,26 @@ Print a help screen and exit.
 .B \-\-version
 Print program name and version and exit.
 .TP
+.B \-\-no-geoip/\-\-geoip
+Enable/disable geoip internet lookup. Is set to True by default.
+Lookup happens once per half an hour.
+
+Geoip lookup is done with SSL connection to "geoiplookup.wikimedia.org".
+It's not as precise as manual entering
+.I latitude
+and
+.I longitude
+but if you're not in a fixed place avoids you to manually set location every
+time it changes.
 .TP
 .B \-\-no-weather/\-\-weather
-Enable/disable weather optimization. Is set to True by default.
+Enable/disable weather internet lookup. Is set to True by default.
+Lookup happens once per hour.
 
-Wheather optimization feature grabs, through several APIs, weather conditions
-of profile-specified latitude/longitude from internet and sets a daytime
-multiplier accordingly, for example, if weather is 'cloudy', multiplier will
-be ~0.23, else if weather is 'clear' it will be 1.00.
+Wheather lookup optimization feature grabs, through SSL connection to several
+APIs, weather conditions of profile-specified latitude/longitude from internet
+and sets a daytime multiplier accordingly, for example, if weather is 'cloudy',
+multiplier will be ~0.23, else if weather is 'clear' it will be 1.00.
 .TP
 .B \-\-location <lat>:<lon>
 Set current location. <lat> (latitude) and <lon> (longitude) have to be

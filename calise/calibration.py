@@ -31,6 +31,7 @@ from calise import camera
 from calise.capture import imaging, processList, sDev
 from calise.system import computation
 from calise import optionsd
+from calise.sun import get_geo
 
 
 # == "PURE" FUNCTIONS =========================================================
@@ -175,6 +176,21 @@ class cameras():
             self.devices[item] = UdevQuery(item)
 
 
+def hasControlCapability(path):
+    retCode = 0
+    capmod = imaging()
+    capmod.initializeCamera(path)
+    capmod.cameraObj.openPath()
+    capmod.adjustCtrls()
+    availableCtrls = capmod.ctrls.keys()
+    for key in [str(x) for x in [12, 18, 28]]:
+        if not availableCtrls.count(key):
+            retCode = 1
+    capmod.restoreCtrls()
+    capmod.cameraObj.closePath()
+    capmod.freeCameraObj()
+    return retCode
+
 # A Thread that starts taking frames from camera and does all needed
 # operations to get a value average until okToStp var is externally set
 # to True.
@@ -226,7 +242,7 @@ class calCapture (threading.Thread):
         After initializing/starting the device, through function getFrameBri
         get a list of all values processed.
         Since getFrameBri can have being run for a long time, only values old
-        not more than 5 seconds (more or less, read below) are kept.
+        not more than 10 seconds (more or less, read below) are kept.
 
         NOTE: since cameras can only take a certain amount of fps, there can
               be a slight error
@@ -236,7 +252,7 @@ class calCapture (threading.Thread):
         startTime = time.time()
         defInt = 2/30.0
         self.data = self.cap.getFrameBri(interval=defInt, loop=True, keep=True)
-        del self.data[:-(int(5 / defInt))]
+        del self.data[:-(int(10 / defInt))]
         self.data = processList(self.data)
         self.average = sum(self.data) / len(self.data)
         self.dev = sDev(self.data, average=self.average)
@@ -342,7 +358,7 @@ class CliCalibration():
         self.BacklightPassage()
         print(
             ">>> " + _("backlight steps: %s")
-            % " -> ".join([str(self.bkofs), str(self.steps - self.bkofs)]))
+            % " -> ".join([str(self.bkofs), str(self.steps - self.bkofs - 1)]))
         print("\n")
 
         # Geo-coordinates passage
@@ -353,7 +369,10 @@ class CliCalibration():
             "optimization to reduce power and cpu usage, based on these "
             "coordinates (thanks to the grat \"ephem\" module)."))
         lat, lon = self.geoLocate()
-        print(">>> " + _("Latitude, Longitude: %.6f, %.6f") % (lat, lon))
+        print(
+            ">>> " + _("Latitude, Longitude: %s, %s")
+                % ('%.6f' if lat is float else str(lat),
+                   '%.6f' if lon is float else str(lon)))
         print("\n")
 
         # Camera passage
@@ -397,7 +416,7 @@ class CliCalibration():
 
     # Obtains a valid config filename
     def ConfigFilenamePassage(self, configname=None):
-        if configname is None:
+        if configname is None and os.getuid() != 0:
             while True:
                 configname = raw_input(
                     _("Enter a name for the new profile") + ": ")
@@ -413,15 +432,24 @@ class CliCalibration():
                     save_config_path(__LowerName__)).\
                     count(configname + ".conf") > 0:
                     dummy = query_yes_no(
-                        _("The selected profile already exists, overwrite?"),
-                        'no')
+                        _("Selected profile already exists, overwrite?"), 'no')
                     if dummy == 'yes':
                         break
                 else:
                     break
                 sys.stdout.write("\n")
-        self.configpath = os.path.join(
-            save_config_path(__LowerName__), configname + '.conf')
+            self.configpath = os.path.join(
+                save_config_path(__LowerName__), configname + '.conf')
+        elif os.getuid() == 0:
+            configname = __LowerName__
+            configpath = os.path.join('/', 'etc', configname + '.conf')
+            if os.path.isfile(configpath):
+                dummy = query_yes_no(
+                    _("Profile already exists, overwrite?"), 'no')
+                if dummy == 'no':
+                    sys.exit(11)
+            self.configpath = configpath
+            configname = self.configpath
         return configname
 
     # Gets sys/class/backlight infos
@@ -509,6 +537,19 @@ class CliCalibration():
 
     # Asks for geolocation coordinates
     def geoLocate(self):
+        self.lat = None
+        self.lon = None
+        geo = get_geo()
+        if geo is not None:
+            lat = geo['lat']
+            lon = geo['lon']
+        dummy = query_yes_no(_(
+            "\nThe program has found these coordinates (%s, %s) through geoip "
+            "lookup, would you like to use these value?") % (lat, lon), "yes")
+        if dummy == "yes":
+            self.lat = lat
+            self.lon = lat
+            return lat, lon
         geoConf = searchExisting(coordinates=True)
         if geoConf:
             config = ConfigParser.RawConfigParser()
@@ -524,7 +565,8 @@ class CliCalibration():
                 "existing profile, would you like to use these values also "
                 "for that one? ") % (lat, lon), "yes")
             if dummy == "yes":
-                self.lat, self.lon = lat, lon
+                self.lat = lat
+                self.lon = lat
                 return lat, lon
         print(_(
             "If you don\'t know where to find latitude/longitude, "
@@ -553,22 +595,28 @@ class CliCalibration():
         while True:
             line = raw_input(_(
                 "Please enter your latitude and longitude as comma separated "
-                "float degrees (take a look a the examples above): "))
-            line = line.replace(', ', ',').split(',')
-            try:
-                lat = float(line[0])
-                lon = float(line[1])
-            except (ValueError, IndexError):
-                lat = 1000.0
-                lon = 1000.0
-            if abs(lat) > 85.0 or abs(lon) > 180.0 or len(line) > 2:
-                print(_(
-                    "Either latitude or longitude values are wrong, please "
-                    "check and retry.\n"))
+                "float degrees (take a look a the examples above), if not "
+                "interested in this feature just leave blank: "))
+            if line:
+                line = line.replace(', ', ',').split(',')
+                try:
+                    lat = float(line[0])
+                    lon = float(line[1])
+                except (ValueError, IndexError):
+                    lat = 1000.0
+                    lon = 1000.0
+                if abs(lat) > 85.0 or abs(lon) > 180.0 or len(line) > 2:
+                    print(_(
+                        "Either latitude or longitude values are wrong, "
+                        "please check and retry.\n"))
+                else:
+                    self.lat = lat
+                    self.lon = lon
+                    break
             else:
                 break
-        self.lat, self.lon = lat, lon
-        return lat, lon
+        # both None if left blank last question
+        return self.lat, self.lon
 
     # Gets wich camera has to be used
     # CAN SKIP = YES (system has got only one camera)
@@ -621,6 +669,8 @@ class CliCalibration():
             config = ConfigParser.RawConfigParser()
             config.read(camConf)
             self.offset = config.getfloat('Camera', 'offset')
+        elif hasControlCapability(self.camera) == 0:
+            self.offset = 0.0
         else:
             raw_input(_('Cover the webcam and then press enter'))
             print(
@@ -735,8 +785,10 @@ class CliCalibration():
         config.set('Backlight', 'offset', str(self.bkofs))
         config.set('Backlight', 'invert', str(self.invert))
         config.add_section('Service')
-        config.set('Service', 'latitude', self.lat)
-        config.set('Service', 'longitude', self.lon)
+        if self.lat is not None:
+            config.set('Service', 'latitude', self.lat)
+        if self.lon is not None:
+            config.set('Service', 'longitude', self.lon)
         config.add_section('Udev')
         config.set('Udev', 'kernel', self.udevice['KERNEL'])
         config.set('Udev', 'device', self.udevice['DEVICE'])
