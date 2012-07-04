@@ -18,7 +18,7 @@
 
 import os
 import sys
-from time import time, sleep
+import time
 import threading
 
 from calise.capture import imaging
@@ -27,19 +27,17 @@ from calise.system import execution
 
 class ExecThread(threading.Thread):
 
-    def __init__(self,args):
-        global arguments
-        arguments = args
+    def __init__(self, args):
+        self.func = mainLoop(args)
         threading.Thread.__init__(self)
-        self.func = _MainLoop()
 
     def run(self):
         self.func.main()
 
 
-class _MainLoop():
+class mainLoop():
 
-    def __init__(self):
+    def __init__(self, args):
         self.step0 = None # capture class
         self.step1 = None # execution class
         self.lock = None
@@ -50,33 +48,37 @@ class _MainLoop():
         self.sct = 5 # seconds between screencaptures:
                      # it's useless to capture the whole screen more often,
                      # maybe it can increased
-        self.ExpPath = arguments.logpath # data export path
+        self.args = args
+        self.ExpPath = self.args.logpath # data export path
 
 
     '''checks how much time passed from loop start and sleeps so that the
-    entire cycle duration is 'arguments.gap', if that is not possible
-    (time passed > arguments.gap), doesn't sleeps.
+    entire cycle duration is 'self.args.gap', if that is not possible
+    (time passed > self.args.gap), doesn't sleeps.
     Also checks if there are signals waiting to be processed
     '''
     def drowsiness(self):
-        for x in range(
-            int(round((arguments.gap + self.timeref - time()) / 0.01, 0))
-        ):
+        sleeptime = 0.01
+        iternum = (self.args.gap + self.timeref - time.time()) / sleeptime
+        if iternum < 1:
+            iternum = 1
+        for x in range(int(round(iternum, 0))):
             # QUIT
             if self.sig == 'quit':
                 return True
             # PAUSE / RESUME
             elif self.sig == 'pause':
                 self.step0.stopCapture()
-                if not arguments.verbosity:
+                if not self.args.gui:
                     sys.stdout.write('\n  =====  PAUSE  =====  \r')
                     sys.stdout.flush()
                 while self.sig is not 'resume':
                     if self.sig == 'quit':
                         return True
                     elif self.sig == 'export':
-                        WriteLog(); self.sig='pause'
-                    sleep(0.01)
+                        self.WriteLog()
+                        self.sig='pause'
+                    time.sleep(sleeptime)
                 if self.sig is not 'quit':
                     self.step0.startCapture()
             # EXPORT
@@ -84,7 +86,7 @@ class _MainLoop():
                 self.WriteLog()
                 self.sig = ''
             else:
-                sleep(0.01)
+                time.sleep(sleeptime)
         return False
 
     '''merges data from history (if available) and current average-range, then
@@ -127,98 +129,95 @@ class _MainLoop():
         except:
             print( '\n' + _('Unable to export to "%s"') % (self.ExpPath) )
 
+    def mainOp(self):
+        self.step0 = imaging()
+        self.step1 = execution(
+            self.args.steps,
+            self.args.bkofs,
+            self.args.invert,
+            self.args.ofs,
+            self.args.delta,
+            pos = self.args.path,
+        )
+        self.lock = _locker()
+        self.basetime = time.time() - self.sct
+        self.step0.initializeCamera(self.args.cam)
+        self.step0.startCapture()
+        self.step0.getFrameBriSimple()
+
+    def mainEd(self):
+        self.step0.stopCapture()
+        self.step0.freeCameraObj()
+
+    def exeloop(self):
+        self.timeref = time.time() # start time of the loop
+        self.step0.getFrameBriSimple()
+        if (
+            self.args.screen is True and
+            self.basetime + self.sct <= time.time()
+            ):
+            self.step0.getScreenBri()
+            self.basetime = time.time()
+        elif self.args.screen is None:
+            self.step0.scr = 0.0
+        self.step1.elaborate(self.step0.amb, self.step0.scr)
+        if (
+            ( self.args.auto ) and
+            (
+                self.lock.lock is False or
+                len(self.step1.data['percent']) < 15 or
+                abs(
+                    self.step1.data['step'][-1] -
+                    self.step1.data['bkstp'][-1]
+                ) > 1
+            )
+        ):
+            if self.step1.WriteStep() is True:
+                self.lock.put()
+        self.step1.PopDataValues(self.args.avg)
+        if self.args.logdata:
+            for val in self.step1.data:
+                self.step1.history[val].append( self.step1.data[val][-1] )
+
+        self.ValuesAverage = (
+            sum(self.step1.data['percent'])/len(self.step1.data['percent'])
+        )
+
+        if not self.args.gui:
+            if self.args.verbose:
+                sys.stdout.write('%3s:%3d %3s:%3d %3s:%3s ' % (
+                    "AMB",round(
+                        self.step1.data['ambient'][-1] -\
+                        self.step1.data['correction'][-1], 0),
+                    "SCR", round(
+                        self.step1.data['screen'][-1], 0),
+                    "COR", str(round(
+                        self.step1.data['correction'][-1],1)),))
+            sys.stdout.write(
+                '%3s:%3d%1s | %3s:%2d %3s:%5.2f%1s %1s:%3d %s %s \r'
+                % (
+                    "PCT", round(self.step1.data['percent'][-1], 0), "%",
+                    "STP", self.step1.data['step'][-1],
+                    "AVG", round(self.ValuesAverage,2), "%",
+                    "N", len(self.step1.data['percent']),
+                    "⚷" if self.lock.lock == True else " ",
+                    "⌚" if self.args.logdata == True else " ",
+                )
+            )
+        sys.stdout.flush()
+        self.lock.check()
+
     '''Initializes all iterated classes and starts main loop: gets everything
     needed, computates/executes and print the result according to the verbosity
     level specified
     '''
     def main(self):
-        self.step0 = imaging()
-        self.step1 = execution(
-            arguments.steps,
-            arguments.bkofs,
-            arguments.invert,
-            arguments.ofs,
-            arguments.delta,
-            pos = arguments.path,
-        )
-        self.lock = _locker()
-        self.basetime = time() - self.sct
-        self.step0.initializeCamera(arguments.cam)
-        self.step0.startCapture()
-        self.step0.cameraObj.readFrame()
+        self.mainOp()
         while True:
-            self.timeref = time() # start time of the loop
-            self.step0.amb = self.step0.cameraObj.readFrame()
-            if (
-                arguments.screen is True and
-                self.basetime + self.sct <= time()
-                ):
-                self.step0.scr_get()
-                self.basetime = time()
-            elif arguments.screen is None:
-                self.step0.scr = 0.0
-            self.step1.elaborate(self.step0.amb,self.step0.scr)
-            if (
-                ( arguments.auto ) and
-                (
-                    self.lock.lock is False or
-                    len(self.step1.data['percent']) < 15 or
-                    abs(
-                        self.step1.data['step'][-1] -
-                        self.step1.data['bkstp'][-1]
-                    ) > 1
-                )
-            ):
-                if self.step1.WriteStep() is True:
-                    self.lock.put()
-            self.step1.PopDataValues(arguments.avg)
-            if arguments.logdata:
-                for val in self.step1.data:
-                    self.step1.history[val].append( self.step1.data[val][-1] )
-
-            self.ValuesAverage = (
-                sum(self.step1.data['percent'])/len(self.step1.data['percent'])
-            )
-
-            if not arguments.verbosity:
-                if arguments.verbose:
-                    sys.stdout.write('%3s:%3d %3s:%3d %3s:%3s ' % (
-                        "AMB",round(
-                            self.step1.data['ambient'][-1] -\
-                            self.step1.data['correction'][-1], 0),
-                        "SCR", round(
-                            self.step1.data['screen'][-1], 0),
-                        "COR", str(round(
-                            self.step1.data['correction'][-1],1)),))
-                sys.stdout.write(
-                    '%3s:%3d%1s | %3s:%2d %3s:%5.2f%1s %1s:%3d %s %s \r'
-                    % (
-                        "PCT", round(self.step1.data['percent'][-1], 0), "%",
-                        "STP", self.step1.data['step'][-1],
-                        "AVG", round(self.ValuesAverage,2), "%",
-                        "N", len(self.step1.data['percent']),
-                        "⚷" if self.lock.lock == True else " ",
-                        "⌚" if arguments.logdata == True else " ",
-                    )
-                )
-            if arguments.verbosity == 1:
-                temp = []
-                for item in self.step1.data:
-                    temp.append( (item,self.step1.data[item][-1]) )
-                temp.append( ('average',self.ValuesAverage) )
-                temp.append( ('valnum',len(self.step1.data['ambient'])) )
-                lockTime = self.lock.expireTime()
-                if lockTime < 0: lockTime = _('None')
-                temp.append( ('lock',lockTime) )
-                temp.append( ('rec',arguments.logdata) )
-                print(temp)
-            sys.stdout.flush()
-
-            self.lock.check()
+            self.exeloop()
             if self.drowsiness() is True:
                 break
-        self.step0.stopCapture()
-        self.step0.freeCameraObj()
+        self.mainEd()
 
 
 class _locker():
@@ -231,7 +230,7 @@ class _locker():
         self.duration = 45
 
     def expireTime(self):
-        try: return self.timestamp - time() + self.duration
+        try: return self.timestamp - time.time() + self.duration
         except: return None
 
     def check(self):
@@ -240,7 +239,7 @@ class _locker():
 
     def put(self):
         self.lock = True
-        self.timestamp = time()
+        self.timestamp = time.time()
 
     def release(self):
         self.lock = False

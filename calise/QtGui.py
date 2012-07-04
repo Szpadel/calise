@@ -18,13 +18,15 @@
 
 import os
 import sys
+import time
 import signal
-import tempfile
-from subprocess import Popen, PIPE
 from PyQt4 import QtGui, QtCore
 
-import infos
-from widgets import AvdancedInfo, BacklightWidget
+from calise.capture import imaging
+from calise.system import execution
+from calise.ExecThreads import mainLoop, _locker
+from calise import infos
+from calise.widgets import AvdancedInfo, BacklightWidget
 
 
 app = None       # QApplication
@@ -126,31 +128,28 @@ class MainWid(QtGui.QWidget):
 
     def OnPause(self,boolean):
         if boolean:
-            self.com.p.send_signal(signal.SIGTSTP)
+            self.com.td.sig = 'pause'
             self.bbw.enPause(True)
             self.bbw.repaint()
         else:
-            self.com.p.send_signal(signal.SIGCONT)
+            self.com.td.sig = 'resume'
             self.bbw.enPause(False)
         QtCore.QObject.emit(
                 self, QtCore.SIGNAL('pauseToggled(bool)'), boolean )
 
     def OnRec(self,boolean):
-        self.com.p.send_signal(signal.SIGUSR1)
+        self.com.td.args.logdata = not self.com.td.args.logdata
 
     # sends CUSTOM2 signal to export recorded data to /tmp/whatever.csv,
     # then copies that csv file content to a user's specified (through dialog)
     # location
     def OnExport(self):
-        self.com.p.send_signal(signal.SIGUSR2)
         filename = QtGui.QFileDialog.getSaveFileName(
-            self, 'Open file',os.getenv('HOME')
-        )
-        if filename == QtCore.QString(''): return
-        with open(filename, 'w') as fd:
-            with open(self.com.LogTemp[1]) as fp:
-                TempContent = fp.read()
-                fd.write(TempContent)
+            self, 'Open file',os.getenv('HOME'))
+        if filename == QtCore.QString(''):
+            return
+        self.com.td.ExpPath = filename
+        self.com.td.sig = 'export'
 
     def changeValue(self):
         if self.bbw.isVisible(): self.updateBacklightMeter()
@@ -395,7 +394,7 @@ class MainWindow(QtGui.QMainWindow):
     def closeEvent(self, event):
         if self.okayToClose:
             self.trayIcon.hide()
-            self.mainWidget.com.p.send_signal(signal.SIGTERM)
+            self.mainWidget.com.td.sig = 'quit'
             while self.mainWidget.com.isRunning(): pass
             app.setQuitOnLastWindowClosed(True)
             event.accept()
@@ -465,71 +464,37 @@ class MainWindow(QtGui.QMainWindow):
 class LineParser(QtCore.QThread):
 
     def __init__(self):
+        self.td = mainLoop(nsargs)
         QtCore.QThread.__init__(self)
 
     def run(self):
-        self.LogTemp = tempfile.mkstemp(suffix='.csv')
-        self.CompileCliArgs()
-        self.p = Popen(self.args,stdout=PIPE,stderr=PIPE)
+        self.td.mainOp()
         while True:
-            poll = self.p.poll()
-            if poll is None:
-                self.runSubProcess()
-            elif poll == 15:
+            self.td.exeloop()
+            dataDict = {}
+            for idx in self.td.step1.data.keys():
+                dataDict[idx] = self.td.step1.data[idx][-1]
+            dataDict['average'] = self.td.ValuesAverage
+            dataDict['valnum'] = len(self.td.step1.data['ambient'])
+            lockTime = self.td.lock.expireTime()
+            if lockTime is None or lockTime < 0:
+                lockTime = _('None')
+            dataDict['lock'] = lockTime
+            dataDict['rec'] = self.td.args.logdata
+            global procData
+            procData = dataDict
+            QtCore.QObject.emit( self,QtCore.SIGNAL('valueChanged()'))
+            if self.td.drowsiness() is True:
                 break
-            elif poll != 0:
-                print(_(
-                    "Subprocess just stopped returning %d.\n"
-                    "If that happens too often, try rebooting (yes I know... "
-                    "I don't have found what causes that yet so rebooting is "
-                    "actually only/best solution), if also after rebooting "
-                    "that bad thing happens often again, please report the "
-                    "bug since it's unknown"
-                ) % poll)
-                global arguments
-                arguments = None
-                self.p = Popen(self.args,stdout=PIPE,stderr=PIPE)
-        os.remove(self.LogTemp[1])
-
-    def runSubProcess(self):
-        global arguments
-        while True:
-            line = ''
-            while True:
-                char = self.p.stdout.read(1)
-                if len(char) == 0 or char == '\n' or char == '' or char == None: break
-                line += char
-            if line == '':
-                pRes = self.p.poll()
-                break
-            if arguments is None:
-                arguments = dict( eval(line) )
-            else:
-                self.data = dict( eval(line) )
-                self.PublishData(self.data)
-
-    # compile arguments to be sent to subprocess (remove redundancies)
-    def CompileCliArgs(self):
-        cliArgs = sys.argv[1:]
-        for i in range(len(cliArgs)):
-            if cliArgs[i] == '--verbosity': del cliArgs[i:i+2]
-            if cliArgs[i] == '--logpath': del cliArgs[i:i+2]
-            if cliArgs[i] == '--no-gui':  del cliArgs[i]
-            if i == len(cliArgs)-1: break
-        self.args = ['calise','--verbosity','1','--no-gui','--logpath']
-        self.args.append(self.LogTemp[1])
-        for item in cliArgs:
-            self.args.append(item)
-
-    # Makes self.data globally available as "procData" dictionary
-    def PublishData(self,dataDict):
-        global procData
-        procData = dataDict
-        QtCore.QObject.emit( self,QtCore.SIGNAL('valueChanged()'))
+        self.td.mainEd()
 
 
 class gui():
-    def __init__(self):
+    def __init__(self, args):
+        global arguments
+        arguments = vars(args)
+        global nsargs
+        nsargs = args
         global app
         app = QtGui.QApplication(sys.argv)
         app.setQuitOnLastWindowClosed(False)

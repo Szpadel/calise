@@ -28,7 +28,7 @@ from xdg.BaseDirectory import save_config_path, load_config_paths
 
 from calise.infos import __LowerName__
 from calise import camera
-from calise.capture import imaging
+from calise.capture import imaging, processList, sDev
 from calise.system import computation
 from calise import optionsd
 
@@ -139,7 +139,7 @@ class cameras():
                     self.camPaths[i] = link
                 else:
                     self.camPaths[i] = (
-                        '%s%s' % (cp.replace(cp.split('/')[-1], ""), link)
+                        '%s%s' % (cp.replace(cp.split('/')[-1], ""), link))
         self.camPaths.sort()
         last = self.camPaths[-1]
         for i in range(len(self.camPaths) - 2, -1, -1):
@@ -163,7 +163,6 @@ class calCapture (threading.Thread):
         self.cap = imaging()
         self.com = computation()
         self.path = path
-        self.okToStop = False
         self.data = []
         self.bfile = bfile
         self.steps = steps
@@ -216,9 +215,10 @@ class calCapture (threading.Thread):
         startTime = time.time()
         defInt = 2/30.0
         self.data = self.cap.getFrameBri(interval=defInt, loop=True, keep=True)
-        del self.data[:-(5 / defInt)]
+        del self.data[:-(int(5 / defInt))]
+        self.data = processList(self.data)
         self.average = sum(self.data) / len(self.data)
-        self.dev = self.cap.sDev(self.data, average=self.average)
+        self.dev = sDev(self.data, average=self.average)
         self.cap.stopCapture()
         self.cap.freeCameraObj()
 
@@ -606,7 +606,7 @@ class CliCalibration():
                 self.camera, self.bfile, self.steps, self.bkofs, self.invert)
             startTime = time.time()
             valThread.start()
-            while time.time() - startTime() < 3:
+            while time.time() - startTime < 4:
                 time.sleep(.1)
             valThread.okToStop()
             valThread.join(10)
@@ -620,9 +620,10 @@ class CliCalibration():
         sys.stdout.flush()
         valThread = calCapture(
                 self.camera, self.bfile, self.steps, self.bkofs, self.invert)
+        startTime = time.time()
         valThread.start()
         cap = imaging()
-        while time.time() - startTime() < 3:
+        while time.time() - startTime < 4:
             time.sleep(.1)
         print(_('Capture thread started.'))
         time.sleep(0.75)

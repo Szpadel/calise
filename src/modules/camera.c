@@ -39,7 +39,7 @@ typedef enum {
     IO_METHOD_USERPTR,
 } io_method;
 
-static io_method io = IO_METHOD_READ;
+static io_method io = IO_METHOD_MMAP;
 
 struct buffer {
     void * start;
