@@ -241,8 +241,8 @@ def mainService(kargs):
         prefix='%s-' % os.path.join(tempdir, __LowerName__), delete=False)
     # Default settings
     defaults = {
-        'capnum': 7,
-        'capint': .5,
+        'capnum': 10,
+        'capint': .2,
         'loglevel': 'info',
         'logfile': logObject.name,
     }

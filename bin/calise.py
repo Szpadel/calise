@@ -152,7 +152,7 @@ if __name__ == '__main__':
     if os.getenv('DISPLAY') is not None and arguments.gui is not False:
         try:
             import calise.QtGui
-            calise.QtGui.gui()
+            calise.QtGui.gui(arguments)
             sys.exit(0)
         except ImportError, err:
             print err

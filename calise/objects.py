@@ -20,7 +20,7 @@ import datetime
 import logging
 
 from calise.system import computation
-from calise.captured import takeScreenshot, takeSomePic
+from calise.capture import imaging, processList
 from calise.sun import getSun, get_daytime_mul
 from calise.infos import __LowerName__
 
@@ -36,6 +36,8 @@ class objects():
         self.oldies = []
         self.resetComers()
         self.wts = None  # weather timestamp
+        self.capture = imaging()
+        self.capture.initializeCamera(self.arguments['cam'])
 
     def dumpValues(self, allv=False):
         if allv:
@@ -104,8 +106,11 @@ class objects():
     def getAmb(self):
         if not self.newcomers['cts']:
             self.getCts()
-        camValues = takeSomePic(
+        self.capture.startCapture()
+        camValues = self.capture.getFrameBri(
             self.arguments['capnum'], self.arguments['capint'])
+        self.capture.stopCapture()
+        camValues = processList(camValues)
         self.newcomers['amb'] = sum(camValues) / float(len(camValues))
         return self.newcomers['amb']
 
@@ -113,7 +118,8 @@ class objects():
     def getScr(self):
         if not self.newcomers['cts']:
             self.getCts()
-        self.newcomers['scr'] = takeScreenshot()
+        self.capture.getScreenBri()
+        self.newcomers['scr'] = self.capture.scr
         return self.newcomers['scr']
 
     # obtains brightness percentage value, corrected if needed (by the amount

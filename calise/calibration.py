@@ -21,13 +21,14 @@ import os
 import ConfigParser
 import threading
 import math
+import time
 from random import random
-from time import time, sleep
 from subprocess import Popen, PIPE
 from xdg.BaseDirectory import save_config_path, load_config_paths
 
 from calise.infos import __LowerName__
-from calise.capture import imaging
+from calise import camera
+from calise.capture import imaging, processList, sDev
 from calise.system import computation
 from calise import optionsd
 
@@ -136,39 +137,41 @@ def searchExisting(camera=None, bfile=None, coordinates=None):
     return ret
 
 
-# Reads PyGame camera list, removes linked devices and fills a dictionary with
-# UDEV informations on every not-linked cam in list
-class camPath():
+class cameras():
+    ''' Camera-list related class
 
+    Get camera list from camera module, remove linked devices and fill a
+    dictionary with UDEV informations on every not-linked cam in list
+
+    NOTE: this class uses camera module *directly* but doesn't init/start the
+          camera
+    '''
     def __init__(self):
-        self.cap = imaging()
-        self.cap.set_cam(auto=False)
+        self.camPaths = camera.listDevices()
         self.devices = {}
 
     # reads PyGame camera list and removes linked duplicates
     def rmLinked(self):
-        for i in range(len(self.cap.cams)):
-            if os.path.islink(self.cap.cams[i]):
-                link = os.readlink(self.cap.cams[i])
+        for i in range(len(self.camPaths)):
+            cp = self.camPaths[i]
+            if os.path.islink(cp):
+                link = os.readlink(cp)
                 if link.startswith('/'):
-                    self.cap.cams[i] = link
+                    self.camPaths[i] = link
                 else:
-                    self.cap.cams[i] = '%s%s' % (
-                        self.cap.cams[i].rstrip(
-                            self.cap.cams[i].split('/')[-1]
-                        ), link
-                    )
-        self.cap.cams.sort()
-        last = self.cap.cams[-1]
-        for i in range(len(self.cap.cams) - 2, -1, -1):
-            if last == self.cap.cams[i]:
-                del self.cap.cams[i]
+                    self.camPaths[i] = (
+                        '%s%s' % (cp.replace(cp.split('/')[-1], ""), link))
+        self.camPaths.sort()
+        last = self.camPaths[-1]
+        for i in range(len(self.camPaths) - 2, -1, -1):
+            if last == self.camPaths[i]:
+                del self.camPaths[i]
             else:
-                last = self.cap.cams[i]
+                last = self.camPaths[i]
 
     # calls UdevQuery on camera list to fill "devices" dictionary
     def putDeviceInfo(self):
-        for item in self.cap.cams:
+        for item in self.camPaths:
             self.devices[item] = UdevQuery(item)
 
 
@@ -181,7 +184,6 @@ class calCapture (threading.Thread):
         self.cap = imaging()
         self.com = computation()
         self.path = path
-        self.okToStop = False
         self.data = []
         self.bfile = bfile
         self.steps = steps
@@ -189,6 +191,10 @@ class calCapture (threading.Thread):
         self.invert = invert
         self.partial = 0
         threading.Thread.__init__(self)
+
+    # stop capture session through imaging.stop flag
+    def okToStop(self):
+        self.cap.stop = True
 
     def adjust_scale(self, cur=0):
         den = 100.00 / self.steps
@@ -214,23 +220,28 @@ class calCapture (threading.Thread):
                 self.data[idx] -= self.com.cor
         self.partial = idxTot
 
-    # While okToStop is not True, appends brightness values taken from the
-    # camera. As soon as okToStop it's True, calculates average and deviation
-    # on every capture from 10th to last.
     def run(self):
-        while self.okToStop is False:
-            timestamp = time()
-            self.cap.cam_get(path=self.path)
-            ambient = self.cap.amb
-            self.data.append(ambient)
-            sleepTime = 0.075 + timestamp - time()
-            if sleepTime > 0:
-                sleep(sleepTime)
-        del self.data[:10]
+        ''' Thread loop function
+
+        After initializing/starting the device, through function getFrameBri
+        get a list of all values processed.
+        Since getFrameBri can have being run for a long time, only values old
+        not more than 5 seconds (more or less, read below) are kept.
+
+        NOTE: since cameras can only take a certain amount of fps, there can
+              be a slight error
+        '''
+        self.cap.initializeCamera(path=self.path)
+        self.cap.startCapture()
+        startTime = time.time()
+        defInt = 2/30.0
+        self.data = self.cap.getFrameBri(interval=defInt, loop=True, keep=True)
+        del self.data[:-(int(5 / defInt))]
+        self.data = processList(self.data)
         self.average = sum(self.data) / len(self.data)
-        self.dev = math.sqrt(
-            sum([(x - self.average) ** 2 for x in self.data]) / len(self.data))
-        self.cap.stop_cam()
+        self.dev = sDev(self.data, average=self.average)
+        self.cap.stopCapture()
+        self.cap.freeCameraObj()
 
 
 # tries to write "step number" step in "sys brightness file" bfile. If not able
@@ -397,7 +408,7 @@ class CliCalibration():
                     print(_(
                         "Since it\'ll be a filename, chars not supported by "
                         "your os will raise an error") + "\n")
-                    sleep(1.5)
+                    time.sleep(1.5)
                 elif os.listdir(
                     save_config_path(__LowerName__)).\
                     count(configname + ".conf") > 0:
@@ -562,41 +573,41 @@ class CliCalibration():
     # Gets wich camera has to be used
     # CAN SKIP = YES (system has got only one camera)
     def CameraPassage(self):
-        devs = camPath()
+        devs = cameras()
         devs.rmLinked()
         devs.putDeviceInfo()
         if len(devs.devices) > 1:
             try:
                 print "\n".join(
                     ["%d: %s (%s)" % (
-                        x + 1, devs.cap.cams[x],
-                        devs.devices[devs.cap.cams[x]]['ATTR']['name']
-                        ) for x in range(len(devs.cap.cams))])
+                        x + 1, devs.camPaths[x],
+                        devs.devices[devs.camPaths[x]]['ATTR']['name']
+                        ) for x in range(len(devs.camPaths))])
             except KeyError:
                 print "\n".join(
                     ["%d: %s" % (
-                        x + 1, devs.cap.cams[x]
-                        ) for x in range(len(devs.cap.cams))])
+                        x + 1, devs.camPaths[x]
+                        ) for x in range(len(devs.camPaths))])
             while True:
                 webcam = raw_input(
                     _("Choose one of cams listed above (None=%s): ") %
-                        devs.cap.cams[0])
+                        devs.camPaths[0])
                 try:
                     if webcam == '':
-                        webcam = devs.cap.cams[0]
+                        webcam = devs.camPaths[0]
                         break
-                    elif int(webcam) <= len(devs.cap.cams) and int(webcam) > 0:
-                        webcam = devs.cap.cams[int(webcam) - 1]
+                    elif int(webcam) <= len(devs.camPaths) and int(webcam) > 0:
+                        webcam = devs.camPaths[int(webcam) - 1]
                         break
                     else:
                         print(_(
                                 "Please retry and enter an integer in the "
-                                "valid range 1-%d!") % len(devs.cap.cams))
+                                "valid range 1-%d!") % len(devs.camPaths))
                 except ValueError, err:
                     print(_("Please retry and enter an integer!"))
                 sys.stdout.write("\n")
         else:
-            webcam = devs.cap.cams[0]
+            webcam = devs.camPaths[0]
         self.camera = webcam
         self.udevice = devs.devices[webcam]
 
@@ -617,10 +628,11 @@ class CliCalibration():
                 _("do not uncover the webcam") + "...")
             valThread = calCapture(
                 self.camera, self.bfile, self.steps, self.bkofs, self.invert)
+            startTime = time.time()
             valThread.start()
-            while len(valThread.data) < 30:
-                pass
-            valThread.okToStop = True
+            while time.time() - startTime < 4:
+                time.sleep(.1)
+            valThread.okToStop()
             valThread.join(10)
             self.offset = valThread.average
         return self.offset
@@ -632,12 +644,13 @@ class CliCalibration():
         sys.stdout.flush()
         valThread = calCapture(
                 self.camera, self.bfile, self.steps, self.bkofs, self.invert)
+        startTime = time.time()
         valThread.start()
         cap = imaging()
-        while len(valThread.data) < 30:
-            pass
+        while time.time() - startTime < 4:
+            time.sleep(.1)
         print(_('Capture thread started.'))
-        sleep(0.75)
+        time.sleep(0.75)
         while True:
             print('')
             p = raw_input(_(
@@ -654,12 +667,12 @@ class CliCalibration():
                     ))
                     if curStep >= self.steps:
                         curStep = self.steps - 1
-                    cap.scr_get()
+                    cap.getScreenBri()
                     valThread.adjustValues(cap.scr)
                     try:
                         writeStep(curStep, self.bfile)
                     except IOError as err:
-                        valThread.okToStop = True
+                        valThread.okToStop()
                         valThread.join(10)
                         brFileWriteErr(err, self.bfile)
                     dummy = query_yes_no(_(
@@ -675,12 +688,12 @@ class CliCalibration():
                     percentage = (
                         (curStep + 1 - self.bkofs) *
                         (100.0 / self.steps))
-                    cap.scr_get()
+                    cap.getScreenBri()
                     valThread.adjustValues(cap.scr)
                     try:
                         writeStep(curStep, self.bfile)
                     except IOError as err:
-                        valThread.okToStop = True
+                        valThread.okToStop()
                         valThread.join(10)
                         brFileWriteErr(err, self.bfile)
                     dummy = query_yes_no(
@@ -696,15 +709,15 @@ class CliCalibration():
                         'Please retry and enter a value according to the '
                         'rules above'
                     ))
-                    sleep(1.5)
+                    time.sleep(1.5)
             except ValueError:
                 print(_(
                     "Please retry and enter a value according to the rules "
                     "above"
                 ))
-                sleep(1.5)
+                time.sleep(1.5)
             print("")
-        valThread.okToStop = True
+        valThread.okToStop()
         valThread.join(10)
         self.delta = (valThread.average - self.offset) / (percentage ** 1.372)
         return percentage, curStep
