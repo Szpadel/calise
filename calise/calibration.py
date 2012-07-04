@@ -39,10 +39,10 @@ from calise import optionsd
 def getMinimumLevel(blpath):
     with open(blpath) as fp:
         currentLevel = int(fp.read())
-    startTime = time()
+    startTime = time.time()
     x = 0
     # anti-infiniteLoop lock based on time (5 seconds)
-    while time() - startTime < 5:
+    while time.time() - startTime < 5:
         try:
             with open(blpath, 'w') as fp:
                 fp.write(str(x))
