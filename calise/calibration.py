@@ -870,16 +870,27 @@ class CliCalibration():
         except IOError, err:
             raise
         fprnt('>>> ' + _('config file saved as: %s') % self.configpath)
-        if os.path.basename(self.configpath) != 'default.conf':
+        if self.configpath == os.path.join('/etc', __LowerName__ + '.conf'):
+            print("")
+            fprnt(_(
+                "This profile will always be read before any other user "
+                "profile and user profiles read after it will (eventually) "
+                "overwrite its settings.\n"
+                "On the other hand, root user will *only* read that file."))
+        elif os.path.basename(self.configpath) != 'default.conf':
             print("")
             fprnt(_(
                 "To use the new profile add \"--profile %s\" to the "
                 "switches") % (os.path.basename(self.configpath)[:-5]))
         if (
-            not os.path.isfile(os.path.join('/', 'etc', 'calise.conf')) and
-            os.path.basename(self.configpath) == 'default.conf'):
+            not os.path.isfile(
+                os.path.join('/etc', __LowerName__ + '.conf')) and
+            os.path.basename(self.configpath) == 'default.conf'
+        ):
             print("")
             fprnt(_(
                 "You may want to use this profile as system-wide one; "
-                "to achieve that copy \"%s\" to \"%s\""
-                % (self.configpath, os.path.join('/', 'etc', 'calise.conf'))))
+                "to achieve that copy \"%s\" to \"%s\"" % (
+                    self.configpath,
+                    os.path.join('/etc', __LowerName__ + '.conf'))
+            ))
