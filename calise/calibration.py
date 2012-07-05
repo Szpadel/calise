@@ -26,6 +26,7 @@ from random import random
 from subprocess import Popen, PIPE
 from xdg.BaseDirectory import save_config_path, load_config_paths
 import textwrap
+from select import select
 
 from calise import console
 
@@ -60,14 +61,24 @@ def getMinimumLevel(blpath):
         currentLevel = int(fp.read())
     startTime = time.time()
     x = 0
-    # anti-infiniteLoop lock based on time (5 seconds)
-    while time.time() - startTime < 5:
+    # NOTE: there's no anti-infiniteLoop check
+    while True:
         try:
             with open(blpath, 'w') as fp:
                 fp.write(str(x))
+            fprnt(_(
+                "This (%d) should be the minimum backlight step possible on "
+                "this machine.") % x)
+            dummy = query_yes_no(customWrap(_(
+                "Are you (even somehow) able to see this message?")),
+                default='no', timeout=30)
             with open(blpath, 'w') as fp:
                 fp.write(str(currentLevel))
-            return x
+            if dummy == 'yes':
+                return x
+            else:
+                x += 1
+                print("")
         except IOError as err:
             if err.errno == 22:
                 x += 1
@@ -305,7 +316,7 @@ def dec_convert(dec):
 
 
 # -- "NON PURE" FUNCTIONS -----------------------------------------------------
-def query_yes_no(question, default="yes"):
+def query_yes_no(question, default="yes", timeout=None):
     '''Ask a yes/no question via raw_input() and return their answer.
 
     "question" is a string that is presented to the user.
@@ -316,27 +327,38 @@ def query_yes_no(question, default="yes"):
     The "answer" return value is one of "yes" or "no".
     '''
     valid = {
-        _("yes"): "yes", _("y"): "yes",
-        _("no"): "no", _("n"): "no"
+        _('yes'): 'yes', _('y'): 'yes',
+        _('no'): 'no', _('n'): 'no',
     }
     if default is None:
-        prompt = " [" + _('y') + "/" + _('n') + "] "
-    elif default == "yes":
-        prompt = " [" + _('Y') + "/" + _('n') + "] "
-    elif default == "no":
-        prompt = " [" + _('y') + "/" + _('N') + "] "
+        prompt = ' [' + _('y') + '/' + _('n') + '] '
+    elif default == 'yes':
+        prompt = ' [' + _('Y') + '/' + _('n') + '] '
+    elif default == 'no':
+        prompt = ' [' + _('y') + '/' + _('N') + '] '
     else:
         raise ValueError("invalid default answer: '%s'" % default)
     while True:
         sys.stdout.write(question + prompt)
-        choice = raw_input().lower()
+        sys.stdout.flush()
+        if timeout is not None:
+            rlist, dull1, dull2 = select([sys.stdin], [], [], timeout)
+            if rlist:
+                choice = sys.stdin.readline()
+                choice = str(''.join(choice.split())).lower()
+            else:
+                choice = ''
+        else:
+            choice = raw_input().lower()
         if default is not None and choice == '':
+            print default
             return default
         elif choice in valid.keys():
             return valid[choice]
         else:
-            sys.stdout.write(customWrap(
-                _("Please respond with 'yes' or 'no' ('y' or 'n')") + ".\n"))
+            print valid.keys()
+            sys.stdout.write(_(
+                "Please respond with 'yes' or 'no' ('y' or 'n')") + ".\n")
 
 
 class CliCalibration():
@@ -376,7 +398,7 @@ class CliCalibration():
         self.BacklightPassage()
         fprnt(
             ">>> " + _("backlight steps: %s")
-            % " -> ".join([str(self.bkofs), str(self.steps - self.bkofs - 1)]))
+            % " -> ".join([str(self.bkofs), str(self.steps + self.bkofs - 1)]))
         fprnt("\n")
 
         # Geo-coordinates passage
@@ -436,8 +458,8 @@ class CliCalibration():
     def ConfigFilenamePassage(self, configname=None):
         if configname is None and os.getuid() != 0:
             while True:
-                configname = raw_input(customWrap(
-                    _("Enter a name for the new profile") + ": "))
+                configname = raw_input(customWrap(_(
+                    "Enter a name for the new profile") + ": "))
                 if (
                     configname != configname + os.path.dirname(configname) or
                     configname == ""):
@@ -449,9 +471,8 @@ class CliCalibration():
                 elif os.listdir(
                     save_config_path(__LowerName__)).\
                     count(configname + ".conf") > 0:
-                    dummy = query_yes_no(customWrap(
-                        _("Selected profile already exists, overwrite?")),
-                        'no')
+                    dummy = query_yes_no(customWrap(_(
+                        "Selected profile already exists, overwrite?")), 'no')
                     if dummy == 'yes':
                         break
                 else:
@@ -469,6 +490,9 @@ class CliCalibration():
                     sys.exit(11)
             self.configpath = configpath
             configname = None
+        else:
+            self.configpath = os.path.join(
+                save_config_path(__LowerName__), configname + '.conf')
         return configname
 
     # Gets sys/class/backlight infos
@@ -491,15 +515,17 @@ class CliCalibration():
             return self.bfile
         # If cannot be skipped
         if len(bfile_list) == 0:
+            sys.stderr.write('\n')
             sys.stderr.write(_(
-                "\nYour system does not appear to have controllable "
-                "backlight\n"))
+                "Your system does not appear to have controllable "
+                "backlight") + '\n')
             sys.exit(1)
-        fprnt("\n" + "\n".join(
+        fprnt('\n' + '\n'.join(
             ["%d: %s" % (x + 1, bfile_list[x]) for x in range(len(bfile_list))]
         ))
+        print("")
         fprnt(_(
-            "\nNOTE: To be sure you pick the right one, try to change "
+            "NOTE: To be sure you pick the right one, try to change "
             "manually the backlight level and check with a simple cat "
             "command (eg. \"cat %s\") wich one of the path displayed changes "
             "its value when changing backlight level.") % bfile_list[0])
@@ -538,10 +564,19 @@ class CliCalibration():
         else:
             step0 = computation()
             step0.get_values('all', self.bfile)
+            fprnt(_(
+                "The program will now try to semi-automatically find the "
+                "minimum backlight level (before \"power-off\") for this "
+                "machine.") + '\n')
+            fprnt(_(
+                "NOTE: If you'll get a blank screen (power-off) don't worry "
+                "and just wait the default timeout (30 seconds)") + '\n')
+            raw_input(customWrap(_("Hit ENTER or RETURN when ready")))
+            print("")
             bkofs = getMinimumLevel(self.bfile)
             if bkofs is None:
-                raw_input(customWrap(
-                    _("Set the backlight to minimum then press enter")))
+                raw_input(customWrap(_(
+                    "Set the backlight to minimum then hit RETURN or ENTER")))
                 bkofs = step0.bkstp
             steps = step0.bkmax
             if steps < bkofs:
@@ -699,7 +734,8 @@ class CliCalibration():
         elif hasControlCapability(self.camera) == 0:
             self.offset = 0.0
         else:
-            raw_input(customWrap(_('Cover the webcam and then press enter')))
+            raw_input(customWrap(_(
+                "Cover the webcam and then press ENTER or RETURN")))
             fprnt(
                 _('Now calibrating') + ", " +
                 _("do not uncover the webcam") + "...")
@@ -716,8 +752,9 @@ class CliCalibration():
 
     # CAN SKIP = NO
     def ValuePassage(self):
-        raw_input(customWrap(
-            _("Uncover the camera and press enter when ready to start")))
+        raw_input(customWrap(_(
+            "Remove any obstruction from the camera and press ENTER or RETURN "
+            "when ready to start")))
         sys.stdout.write(_("Now calibrating") + "... ")
         sys.stdout.flush()
         valThread = calCapture(
@@ -731,13 +768,18 @@ class CliCalibration():
         time.sleep(0.75)
         print("")
         while True:
-            tpct = int(round(100 * random(), 0))
+            tpct = int(round(120 * random(), 0))
             tstp = int(round(self.bkofs - 1 + tpct / (100.0 / self.steps), 0))
+            if tstp > self.steps - 1 + self.bkofs:
+                tstp = self.steps - 1 + self.bkofs
+            elif tstp < self.bkofs:
+                tstp = self.bkofs
             p = raw_input(customWrap(_(
                 "Choose a value for the current ambient brightness, consider "
                 "that the more brightness there is, the more precise will the "
                 "scale of the program be, supported values are backlight "
-                "steps or percents (eg. %d or %d%%): ") % (tstp, tpct)))
+                "steps or percentage (eg. %d or %d%%, percentage *can* be "
+                "over 100%% for particular needs): ") % (tstp, tpct)))
             try:
                 if str(p)[-1] == '%':
                     percentage = float(str(p)[:-1])
@@ -786,12 +828,12 @@ class CliCalibration():
                         'Please retry and enter a value according to the '
                         'rules above'))
                     time.sleep(1.5)
+                print("")
             except ValueError:
                 fprnt(_(
                     "Please retry and enter a value according to the rules "
-                    "above"))
+                    "above") + '\n')
                 time.sleep(1.5)
-            print("")
         valThread.okToStop()
         valThread.join(10)
         self.delta = (valThread.average - self.offset) / (percentage ** 1.372)

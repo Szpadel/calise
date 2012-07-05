@@ -162,15 +162,15 @@ def get_daytime_mul(lat, lon):
         # daytime multiplier based on weather conditions (from 1.0 to 0.2)
         weather_mul = {
             # Commons
-            'clear': minimum + step * 7,
-            'mostly sunny': minimum + step * 6,
-            'partly sunny': minimum + step * 5,
-            'partly cloudy': minimum + step * 4,
-            'mostly cloudy': minimum + step * 3,
-            'cloudy': minimum + step * 2,
-            'overcast': minimum + step * 1,
+            'clear': minimum + step * 7,               # < 1/8 sky coverage
+            'mostly sunny': minimum + step * 6,        # 1/8 to 3/8 coverage
+            'partly sunny': minimum + step * 5,        # 3/8 to 4/8 coverage
+            'partly cloudy': minimum + step * 4,       # 4/8 to 5/8 coverage
+            'mostly cloudy': minimum + step * 3,       # 5/8 to 6/8 coverage
+            'cloudy': minimum + step * 2,              # 6/8 to 7/8 coverage
+            'overcast': minimum + step * 1,            # 8/8 coverage
             # Others
-            'scattered clouds': minimum + step * 5,
+            'scattered clouds': minimum + step * 5.5,  # 10% to 50% coverage
             'chance of rain': minimum + step * 3,
             'light rain': minimum + step * 2,
             'rain': minimum + step * 1,

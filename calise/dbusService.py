@@ -161,11 +161,11 @@ class dbusService(dbus.service.Object):
             self.mainLoop.quit()
         # final return code check
         if retCode == 0:
-            retMsg = "[INFO] Service successfully stopped"
+            retMsg = "service successfully stopped"
         else:
             retMsg = (
-                "[ERROR] \"Terminate\" not processed correctly. "
-                "Read program logs for further info")
+                "error: \"terminate\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -174,11 +174,11 @@ class dbusService(dbus.service.Object):
         retCode = self.pth.loggerFuncWrap(self.pth.pauseTh)
         # final return code check
         if retCode == 0:
-            retMsg = "[INFO] Service successfully paused"
+            retMsg = "service successfully paused"
         else:
             retMsg = (
-                "[ERROR] \"Pause\" not processed correctly. "
-                "Read program logs for further info")
+                "error: \"pause\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -187,11 +187,11 @@ class dbusService(dbus.service.Object):
         retCode = self.pth.loggerFuncWrap(self.pth.resumeTh)
         # final return code check
         if retCode == 0:
-            retMsg = "[INFO] Service successfully resumed"
+            retMsg = "service successfully resumed"
         else:
             retMsg = (
-                "[ERROR] \"Resume\" not processed correctly. "
-                "Read program logs for further info")
+                "error \"resume\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -204,11 +204,11 @@ class dbusService(dbus.service.Object):
             retCode = self.pth.loggerFuncWrap(self.pth.startTh)
         # final return code check
         if retCode == 0:
-            retMsg = "[INFO] Service successfully restarted"
+            retMsg = "service successfully restarted"
         else:
             retMsg = (
-                "[ERROR] \"Restart\" not processed correctly. "
-                "Read program logs for further info")
+                "error: \"restart\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -217,11 +217,11 @@ class dbusService(dbus.service.Object):
         retCode = self.pth.loggerFuncWrap(self.pth.startTh)
         # final return code check
         if retCode == 0:
-            retMsg = "[INFO] Service successfully started"
+            retMsg = "service successfully started"
         else:
             retMsg = (
-                "[ERROR] \"Start\" not processed correctly. "
-                "Read program logs for further info")
+                "error: \"start\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -230,11 +230,11 @@ class dbusService(dbus.service.Object):
         retCode = self.pth.loggerFuncWrap(self.pth.stopTh)
         # final return code check
         if retCode == 0:
-            retMsg = "[INFO] Service successfully stopped"
+            retMsg = "service successfully stopped"
         else:
             retMsg = (
-                "[ERROR] \"Stop\" not processed correctly. "
-                "Read program logs for further info")
+                "warning: \"stop\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -243,12 +243,12 @@ class dbusService(dbus.service.Object):
         retCode = self.pth.loggerFuncWrap(self.pth.checkTh)
         # final return code check
         if retCode == 0:
-            retMsg = "[INFO] Service is alive and running"
+            retMsg = "service is alive and running"
         elif retCode == 2:
-            retMsg = "[INFO] Service is alive but paused"
+            retMsg = "service is alive but paused"
         else:
             retMsg = (
-                "[ERROR] Unable to check thread execution")
+                "warning: unable to check thread execution")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -262,8 +262,8 @@ class dbusService(dbus.service.Object):
             self.logger.debug("Data dumped")
         else:
             retMsg = (
-                "[ERROR] \"Dump\" not processed correctly. "
-                "Read program logs for further info")
+                "warning: \"dump\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -283,8 +283,8 @@ class dbusService(dbus.service.Object):
             self.logger.debug("All data dumped")
         else:
             retMsg = (
-                "[ERROR] \"DumpAll\" not processed correctly. "
-                "Read program logs for further info")
+                "warning: \"dump all\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -297,8 +297,8 @@ class dbusService(dbus.service.Object):
             self.logger.debug("Settings dumped")
         else:
             retMsg = (
-                "[ERROR] \"Dump settings\" not processed correctly. "
-                "Read program logs for further info")
+                "warning: \"dump settings\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -307,11 +307,11 @@ class dbusService(dbus.service.Object):
         retCode = self.pth.thCapture()
         # final return code check
         if retCode == 0:
-            retMsg = "[INFO] Manual capture successfully executed"
+            retMsg = "manual capture successfully executed"
         else:
             retMsg = (
-                "[ERROR] \"Manual capture\" not processed correctly. "
-                "Read program logs for further info")
+                "warning: \"manual capture\" not processed correctly, "
+                "read program logs for further info")
         return retMsg
 
     @dbus.service.method('org.%s.service' % __LowerName__)
@@ -320,11 +320,11 @@ class dbusService(dbus.service.Object):
         retCode = self.pth.setTh(idx, str(value))
         # final return code check
         if retCode == 0:
-            retMsg = "[INFO] %s successfully set to %s" % (idx, value)
+            retMsg = "%s successfully set to %s" % (idx, value)
         else:
             retMsg = (
-                "[ERROR] \"%s\" setting not processed correctly. "
-                "Read program logs for further info" % idx)
+                "warning: \"%s\" setting not processed correctly, "
+                "read program logs for further info" % idx)
         return retMsg
 
 
