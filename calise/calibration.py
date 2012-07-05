@@ -605,7 +605,7 @@ class CliCalibration():
         print("")
         if dummy == "yes":
             self.lat = lat
-            self.lon = lat
+            self.lon = lon
             return lat, lon
         geoConf = searchExisting(coordinates=True)
         if geoConf:
@@ -624,7 +624,7 @@ class CliCalibration():
             print("")
             if dummy == "yes":
                 self.lat = lat
-                self.lon = lat
+                self.lon = lon
                 return lat, lon
         fprnt(_(
             "If you don\'t know where to find latitude/longitude, "
