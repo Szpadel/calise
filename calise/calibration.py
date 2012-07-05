@@ -25,6 +25,9 @@ import time
 from random import random
 from subprocess import Popen, PIPE
 from xdg.BaseDirectory import save_config_path, load_config_paths
+import textwrap
+
+from calise import console
 
 from calise.infos import __LowerName__
 from calise import camera
@@ -32,6 +35,21 @@ from calise.capture import imaging, processList, sDev
 from calise.system import computation
 from calise import optionsd
 from calise.sun import get_geo
+
+
+def customWrap(textstring, width=None):
+    if width is None:
+        width = console.getTerminalSize()[0] - 2
+    textstring = textstring.split('\n')
+    for idx in range(len(textstring)):
+        chadd = ''
+        if textstring[idx].endswith(' '):
+            chadd = ' '
+        textstring[idx] = textwrap.fill(textstring[idx], width) + chadd
+    return '\n'.join(textstring)
+
+def fprnt(stringa):
+    print customWrap(stringa)
 
 
 # == "PURE" FUNCTIONS =========================================================
@@ -317,8 +335,8 @@ def query_yes_no(question, default="yes"):
         elif choice in valid.keys():
             return valid[choice]
         else:
-            sys.stdout.write(
-                _("Please respond with 'yes' or 'no' (or 'y' or 'n')") + ".\n")
+            sys.stdout.write(customWrap(
+                _("Please respond with 'yes' or 'no' ('y' or 'n')") + ".\n"))
 
 
 class CliCalibration():
@@ -331,108 +349,109 @@ class CliCalibration():
     def __init__(self, configpath=None, brPath=None):
 
         # Profile name passage
-        print("Step 1 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
-        print(_(
+        fprnt("Step 1 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
+        fprnt(_(
             "This passage gets a valid profile name to be stored as config "
             "file\'s filename."))
         configname = self.ConfigFilenamePassage(configpath)
-        print(">>> " + _("profile name: %s") % configname)
-        print(">>> " + _("profile path: %s") % self.configpath)
-        print("\n")
+        fprnt(">>> " + _("profile name: %s") % str(configname))
+        fprnt(">>> " + _("profile path: %s") % str(self.configpath))
+        fprnt("\n")
 
         # Sysfs backlight path passage
-        print("Step 2 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
-        print(_(
+        fprnt("Step 2 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
+        fprnt(_(
             "This passage lists all available sysfs backlight directories "
             "and, if more than one, asks wich has to be used."))
         self.BacklightPathPassage(brPath)
-        print(">>> " + _("sysfs backlight path: %s") % self.bfile)
-        print("\n")
+        fprnt(">>> " + _("sysfs backlight path: %s") % self.bfile)
+        fprnt("\n")
 
         # Backlight steps passage
-        print("Step 3 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
-        print(_(
+        fprnt("Step 3 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
+        fprnt(_(
             "This passage obtains available backlight steps with selected "
             "sysfs backlight path and displays them ordered from lower to "
             "higher backlight level."))
         self.BacklightPassage()
-        print(
+        fprnt(
             ">>> " + _("backlight steps: %s")
             % " -> ".join([str(self.bkofs), str(self.steps - self.bkofs - 1)]))
-        print("\n")
+        fprnt("\n")
 
         # Geo-coordinates passage
-        print("Step 4 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
-        print(_(
-            "This passage asks for latitude and longitude; these are needed "
-            "for service execution. The service has a lot of spatio-temporal "
-            "optimization to reduce power and cpu usage, based on these "
-            "coordinates (thanks to the grat \"ephem\" module)."))
+        fprnt("Step 4 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
+        fprnt(_(
+            "This passage asks for latitude and longitude; these are really "
+            "useful for service execution since it has a lot of spatio-"
+            "temporal optimizations (to reduce power and cpu usage), based on "
+            "them (thanks to the great \"ephem\" module)."))
         lat, lon = self.geoLocate()
-        print(
+        fprnt(
             ">>> " + _("Latitude, Longitude: %s, %s")
                 % ('%.6f' if lat is float else str(lat),
                    '%.6f' if lon is float else str(lon)))
-        print("\n")
+        fprnt("\n")
 
         # Camera passage
-        print("Step 5 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
-        print(_(
+        fprnt("Step 5 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
+        fprnt(_(
             "This passage lists all available cameras on this machine and, "
             "if more than one, asks wich camera has to be used."))
         self.CameraPassage()
         sys.stdout.write(">>> " + _("camera: %s") % str(self.camera))
         try:
-            print(" (%s)" % self.udevice["ATTR"]["name"])
+            fprnt(" (%s)" % self.udevice["ATTR"]["name"])
         except KeyError:
-            print("")
-        print("\n")
+            fprnt("")
+        fprnt("\n")
 
         # Camera white balance offset passage
-        print("Step 6 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
-        print(_(
+        fprnt("Step 6 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
+        fprnt(_(
             "This passage lets the program be aware of the lower lightness "
             "that can be registered by the camera to contrast its white "
             "balance feature."))
         self.OffsetPassage()
-        print(
+        fprnt(
             ">>> " + _("Average camera offset: %.1f") % round(self.offset, 1))
-        print("\n")
+        fprnt("\n")
 
         # Brightness/Backlight user preferrend scale conversion
-        print("Step 7 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
-        print(_(
+        fprnt("Step 7 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
+        fprnt(_(
             "This passage starts an interactive \"capture\" session where "
             "you'll be asked to select the best backlight step for that very "
             "moment. And of course \"the more the brightness, the more the "
             "precision\"."))
         pct, cbs = self.ValuePassage()
-        print(">>> " + _(
+        fprnt(">>> " + _(
             "percentage: %.2f%% and backlight step: %d for current "
             "ambient brightness.") % (pct, cbs))
-        print(">>> " + _("Conversion scale delta: %.3f") % self.delta)
-        print("\n")
+        fprnt(">>> " + _("Conversion scale delta: %.3f") % self.delta)
+        fprnt("\n")
         self.WritePassage()
 
     # Obtains a valid config filename
     def ConfigFilenamePassage(self, configname=None):
         if configname is None and os.getuid() != 0:
             while True:
-                configname = raw_input(
-                    _("Enter a name for the new profile") + ": ")
+                configname = raw_input(customWrap(
+                    _("Enter a name for the new profile") + ": "))
                 if (
                     configname != configname + os.path.dirname(configname) or
                     configname == ""):
-                    print(_("Please retry and enter a valid name."))
-                    print(_(
+                    fprnt(_("Please retry and enter a valid name."))
+                    fprnt(_(
                         "Since it\'ll be a filename, chars not supported by "
                         "your os will raise an error") + "\n")
                     time.sleep(1.5)
                 elif os.listdir(
                     save_config_path(__LowerName__)).\
                     count(configname + ".conf") > 0:
-                    dummy = query_yes_no(
-                        _("Selected profile already exists, overwrite?"), 'no')
+                    dummy = query_yes_no(customWrap(
+                        _("Selected profile already exists, overwrite?")),
+                        'no')
                     if dummy == 'yes':
                         break
                 else:
@@ -444,12 +463,12 @@ class CliCalibration():
             configname = __LowerName__
             configpath = os.path.join('/', 'etc', configname + '.conf')
             if os.path.isfile(configpath):
-                dummy = query_yes_no(
-                    _("Profile already exists, overwrite?"), 'no')
+                dummy = query_yes_no(customWrap(
+                    _("Profile already exists, overwrite?")), 'no')
                 if dummy == 'no':
                     sys.exit(11)
             self.configpath = configpath
-            configname = self.configpath
+            configname = None
         return configname
 
     # Gets sys/class/backlight infos
@@ -476,17 +495,17 @@ class CliCalibration():
                 "\nYour system does not appear to have controllable "
                 "backlight\n"))
             sys.exit(1)
-        print("\n" + "\n".join(
+        fprnt("\n" + "\n".join(
             ["%d: %s" % (x + 1, bfile_list[x]) for x in range(len(bfile_list))]
         ))
-        print(_(
+        fprnt(_(
             "\nNOTE: To be sure you pick the right one, try to change "
             "manually the backlight level and check with a simple cat "
             "command (eg. \"cat %s\") wich one of the path displayed changes "
             "its value when changing backlight level.") % bfile_list[0])
         while True:
-            bfile_idx = raw_input(_(
-                "Choose one of the path listed above (None=%d): ") % 1)
+            bfile_idx = raw_input(customWrap(_(
+                "Choose one of the path listed above (None=%d): ") % 1))
             try:
                 if bfile_idx == '':
                     self.bfile = bfile_list[0]
@@ -495,11 +514,11 @@ class CliCalibration():
                     self.bfile = bfile_list[int(bfile_idx) - 1]
                     break
                 else:
-                    print(_(
+                    fprnt(_(
                         "Please retry and enter an integer in the "
                         "valid range 1-%d!") % len(bfile_list))
             except ValueError, err:
-                print(_("Please retry and enter an integer!"))
+                fprnt(_("Please retry and enter an integer!"))
             sys.stdout.write("\n")
         return self.bfile
 
@@ -521,7 +540,8 @@ class CliCalibration():
             step0.get_values('all', self.bfile)
             bkofs = getMinimumLevel(self.bfile)
             if bkofs is None:
-                raw_input(_("Set the backlight to minimum then press enter"))
+                raw_input(customWrap(
+                    _("Set the backlight to minimum then press enter")))
                 bkofs = step0.bkstp
             steps = step0.bkmax
             if steps < bkofs:
@@ -537,15 +557,17 @@ class CliCalibration():
 
     # Asks for geolocation coordinates
     def geoLocate(self):
+        print("")
         self.lat = None
         self.lon = None
         geo = get_geo()
         if geo is not None:
             lat = geo['lat']
             lon = geo['lon']
-        dummy = query_yes_no(_(
-            "\nThe program has found these coordinates (%s, %s) through geoip "
-            "lookup, would you like to use these value?") % (lat, lon), "yes")
+        dummy = query_yes_no(customWrap(_(
+            "The program has found these coordinates (%s, %s) through geoip "
+            "lookup, would you like to use these value?") % (lat, lon)), "yes")
+        print("")
         if dummy == "yes":
             self.lat = lat
             self.lon = lat
@@ -560,43 +582,46 @@ class CliCalibration():
             elif config.has_option('Service', 'latitude'):
                 lat = config.getfloat('Service', 'latitude')
                 lon = config.getfloat('Service', 'longitude')
-            dummy = query_yes_no(_(
-                "\nThe program has found these coordinates (%s, %s) in an "
+            dummy = query_yes_no(customWrap(_(
+                "The program has found these coordinates (%s, %s) in an "
                 "existing profile, would you like to use these values also "
-                "for that one? ") % (lat, lon), "yes")
+                "for that one? ") % (lat, lon)), "yes")
+            print("")
             if dummy == "yes":
                 self.lat = lat
                 self.lon = lat
                 return lat, lon
-        print(_(
+        fprnt(_(
             "If you don\'t know where to find latitude/longitude, "
             "http://www.earthtools.org/ is a good place to start from."))
-        print(_(
-            "\nNOTE: N and E values have [+], S and W have instead [-]."))
+        print("")
+        fprnt(_(
+            "NOTE: N and E values have [+], S and W have instead [-]."))
         eg_lat = (random() * .85) * 100
         eg_lon = (random() * 1.8) * 100
         eg_dlat = dec_convert(eg_lat)
         eg_dlon = dec_convert(eg_lon)
-        print("  eg.1: %.6f,%.6f   for %d°%02d\'%02d\"N, %d°%02d\'%02d\"E" % (
+        fprnt("  eg.1: %.6f,%.6f   for %d°%02d\'%02d\"N, %d°%02d\'%02d\"E" % (
             eg_lat, eg_lon,
             eg_dlat[0], eg_dlat[1], eg_dlat[2],
             eg_dlon[0], eg_dlon[1], eg_dlon[2],
         ))
-        print("  eg.2: %.6f,%.6f  for %d°%02d\'%02d\"N, %d°%02d\'%02d\"W" % (
+        fprnt("  eg.2: %.6f,%.6f  for %d°%02d\'%02d\"N, %d°%02d\'%02d\"W" % (
             eg_lat, -eg_lon,
             eg_dlat[0], eg_dlat[1], eg_dlat[2],
             eg_dlon[0], eg_dlon[1], eg_dlon[2],
         ))
-        print("  eg.3: %.6f,%.6f for %d°%02d\'%02d\"S, %d°%02d\'%02d\"W" % (
+        fprnt("  eg.3: %.6f,%.6f for %d°%02d\'%02d\"S, %d°%02d\'%02d\"W" % (
             -eg_lat, -eg_lon,
             eg_dlat[0], eg_dlat[1], eg_dlat[2],
             eg_dlon[0], eg_dlon[1], eg_dlon[2],
         ))
+        print("")
         while True:
-            line = raw_input(_(
+            line = raw_input(customWrap(_(
                 "Please enter your latitude and longitude as comma separated "
                 "float degrees (take a look a the examples above), if not "
-                "interested in this feature just leave blank: "))
+                "interested in this feature just leave blank: ")))
             if line:
                 line = line.replace(', ', ',').split(',')
                 try:
@@ -606,7 +631,7 @@ class CliCalibration():
                     lat = 1000.0
                     lon = 1000.0
                 if abs(lat) > 85.0 or abs(lon) > 180.0 or len(line) > 2:
-                    print(_(
+                    fprnt(_(
                         "Either latitude or longitude values are wrong, "
                         "please check and retry.\n"))
                 else:
@@ -626,20 +651,22 @@ class CliCalibration():
         devs.putDeviceInfo()
         if len(devs.devices) > 1:
             try:
-                print "\n".join(
+                fprnt("\n".join(
                     ["%d: %s (%s)" % (
                         x + 1, devs.camPaths[x],
                         devs.devices[devs.camPaths[x]]['ATTR']['name']
                         ) for x in range(len(devs.camPaths))])
+                )
             except KeyError:
-                print "\n".join(
+                fprnt("\n".join(
                     ["%d: %s" % (
                         x + 1, devs.camPaths[x]
                         ) for x in range(len(devs.camPaths))])
+                )
             while True:
-                webcam = raw_input(
+                webcam = raw_input(customWrap(
                     _("Choose one of cams listed above (None=%s): ") %
-                        devs.camPaths[0])
+                        devs.camPaths[0]))
                 try:
                     if webcam == '':
                         webcam = devs.camPaths[0]
@@ -648,11 +675,11 @@ class CliCalibration():
                         webcam = devs.camPaths[int(webcam) - 1]
                         break
                     else:
-                        print(_(
+                        fprnt(_(
                                 "Please retry and enter an integer in the "
                                 "valid range 1-%d!") % len(devs.camPaths))
                 except ValueError, err:
-                    print(_("Please retry and enter an integer!"))
+                    fprnt(_("Please retry and enter an integer!"))
                 sys.stdout.write("\n")
         else:
             webcam = devs.camPaths[0]
@@ -672,8 +699,8 @@ class CliCalibration():
         elif hasControlCapability(self.camera) == 0:
             self.offset = 0.0
         else:
-            raw_input(_('Cover the webcam and then press enter'))
-            print(
+            raw_input(customWrap(_('Cover the webcam and then press enter')))
+            fprnt(
                 _('Now calibrating') + ", " +
                 _("do not uncover the webcam") + "...")
             valThread = calCapture(
@@ -689,8 +716,9 @@ class CliCalibration():
 
     # CAN SKIP = NO
     def ValuePassage(self):
-        raw_input(_('Uncover the camera and press enter when ready to start'))
-        sys.stdout.write(_('Now calibrating') + '... ')
+        raw_input(customWrap(
+            _("Uncover the camera and press enter when ready to start")))
+        sys.stdout.write(_("Now calibrating") + "... ")
         sys.stdout.flush()
         valThread = calCapture(
                 self.camera, self.bfile, self.steps, self.bkofs, self.invert)
@@ -699,16 +727,17 @@ class CliCalibration():
         cap = imaging()
         while time.time() - startTime < 4:
             time.sleep(.1)
-        print(_('Capture thread started.'))
+        fprnt(_("Capture thread started."))
         time.sleep(0.75)
+        print("")
         while True:
-            print('')
-            p = raw_input(_(
-                'Choose a value for the current ambient brightness, consider '
-                'that the more brightness there is, the more precise will the '
-                'scale of the program be, supported values are backlight '
-                'steps or percents (eg. 5 or 56%): ')
-            )
+            tpct = int(round(100 * random(), 0))
+            tstp = int(round(self.bkofs - 1 + tpct / (100.0 / self.steps), 0))
+            p = raw_input(customWrap(_(
+                "Choose a value for the current ambient brightness, consider "
+                "that the more brightness there is, the more precise will the "
+                "scale of the program be, supported values are backlight "
+                "steps or percents (eg. %d or %d%%): ") % (tstp, tpct)))
             try:
                 if str(p)[-1] == '%':
                     percentage = float(str(p)[:-1])
@@ -725,10 +754,10 @@ class CliCalibration():
                         valThread.okToStop()
                         valThread.join(10)
                         brFileWriteErr(err, self.bfile)
-                    dummy = query_yes_no(_(
+                    dummy = query_yes_no(customWrap(_(
                             "Choosen percentage value roughly equals to the "
                             "%dth backlight step, would you like to use that "
-                            "value?") % (curStep), "yes")
+                            "value?") % (curStep)), "yes")
                     if dummy == "yes":
                         break
                 elif (
@@ -746,25 +775,21 @@ class CliCalibration():
                         valThread.okToStop()
                         valThread.join(10)
                         brFileWriteErr(err, self.bfile)
-                    dummy = query_yes_no(
-                        _(
+                    dummy = query_yes_no(customWrap(_(
                             'Choosen backlight step value roughly equals to '
                             '%.2f%% of ambient brightness, would you like to '
-                            'use that value?'
-                        ) % (percentage), 'yes')
+                            'use that value?') % (percentage)), 'yes')
                     if dummy == 'yes':
                         break
                 else:
-                    print(_(
+                    fprnt(_(
                         'Please retry and enter a value according to the '
-                        'rules above'
-                    ))
+                        'rules above'))
                     time.sleep(1.5)
             except ValueError:
-                print(_(
+                fprnt(_(
                     "Please retry and enter a value according to the rules "
-                    "above"
-                ))
+                    "above"))
                 time.sleep(1.5)
             print("")
         valThread.okToStop()
@@ -773,7 +798,7 @@ class CliCalibration():
         return percentage, curStep
 
     def WritePassage(self):
-        print(_('Making a config file with the choosen settings...'))
+        fprnt(_("Building a config file with the choosen settings..."))
         config = ConfigParser.RawConfigParser()
         config.add_section('Camera')
         config.set('Camera', 'camera', str(self.camera))
@@ -802,17 +827,17 @@ class CliCalibration():
                 config.write(configfile)
         except IOError, err:
             raise
-        print('>>> ' + _('config file saved as: %s') % self.configpath)
+        fprnt('>>> ' + _('config file saved as: %s') % self.configpath)
         if os.path.basename(self.configpath) != 'default.conf':
-            print ""
-            print(_(
+            print("")
+            fprnt(_(
                 "To use the new profile add \"--profile %s\" to the "
                 "switches") % (os.path.basename(self.configpath)[:-5]))
         if (
             not os.path.isfile(os.path.join('/', 'etc', 'calise.conf')) and
             os.path.basename(self.configpath) == 'default.conf'):
-            print ""
-            print(_(
+            print("")
+            fprnt(_(
                 "You may want to use this profile as system-wide one; "
                 "to achieve that copy \"%s\" to \"%s\""
                 % (self.configpath, os.path.join('/', 'etc', 'calise.conf'))))
