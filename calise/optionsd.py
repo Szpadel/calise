@@ -32,23 +32,33 @@ serviceCommands = execCommands + queryCommands
 logger = logging.getLogger('.'.join([__LowerName__, 'options']))
 
 # Default settings
-defaults = {
+defaultSettings = {
     'capnum': 12,
     'capint': .2,
     'loglevel': 'info',
     'logfile': None,
     'geoip': True,
     'weather': True,
+    'dayst': 300.0,
+    'dusksm': 0.8,
+    'nightst': 0.0,
 }
 
 
+# Lookup for setting key and if not present, set necessary optionals to default
+def checkSettingsArguments():
+    for key in defaultSettings.keys():
+        if not key in settings.keys():
+            settings[key] = defaultSettings[key]
+
+
 def getDefaultSettings():
-    return defaults
+    return defaultSettings
 
 
 def get_path(pname='default', sufx='.conf'):
     # yield system-wide profile first
-    yield os.path.join('/', 'etc', __LowerName__ + sufx)
+    yield os.path.join('/etc', __LowerName__ + sufx)
     # search for profiles other than system-wide one only if NOT running as
     # root (uid=0)
     if os.getuid() > 0:
@@ -190,6 +200,24 @@ class serviceGetArgs():
             '--no-geoip',
             action='store_true', default=None, dest='ngeoip',
             help="disable geoip internet lookup")
+        # sleeptime-related
+        parser.add_argument(
+            '--twilight-mul',
+            metavar='<float>', dest='dusksm', default=None,
+            help=(
+                "set the multiplier for dawn/sunset sleeptime (default: 0.8)"))
+        parser.add_argument(
+            '--day-sleeptime',
+            metavar='<float>', dest='dayst', default=None,
+            help=(
+                "set maximum seconds between captures during the day "
+                "(default: 300)"))
+        parser.add_argument(
+            '--night-sleeptime',
+            metavar='<float>', dest='nightst', default=None,
+            help=(
+                "set seconds between captures at night; 0 means no captures "
+                "(default)"))
         # Logging
         parser.add_argument(
             '--loglevel',
@@ -248,6 +276,13 @@ class serviceGetArgs():
             settings['geoip'] = True
         elif args['ngeoip']:
             settings['geoip'] = False
+        # sleeptime-related arguments
+        if args['dusksm']:
+            settings['dusksm'] = float(args['dusksm'])
+        if args['dayst']:
+            settings['dayst'] = float(args['dayst'])
+        if args['nightst']:
+            settings['nightst'] = float(args['nightst'])
         # Logging related arguments
         if args['loglevel']:
             settings['loglevel'] = args['loglevel']
@@ -290,6 +325,9 @@ class profiler():
             'capint': (float, 'capint'),
             'geoip': (bool, 'geoip'),
             'weather': (bool, 'weather'),
+            'dayst': (float, 'dayst'),
+            'nightst': (float, 'nightst'),
+            'dusksm': (float, 'dusksm'),
             },
         'Daemon': {
             'latitude': (float, 'latitude'),
@@ -298,6 +336,9 @@ class profiler():
             'capint': (float, 'capint'),
             'geoip': (bool, 'geoip'),
             'weather': (bool, 'weather'),
+            'dayst': (float, 'dayst'),
+            'nightst': (float, 'nightst'),
+            'dusksm': (float, 'dusksm'),
         },
         'Advanced': {
             'average': (int, 'avg'),

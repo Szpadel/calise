@@ -248,13 +248,15 @@ class objects():
         self.logger.debug("Function '%s' returned %d" % ('writeStep', r))
         return 0
 
-    """ service "core"
-    With the help of the getSun function (which use ephem module) in
-    calise.sun module, discovers current time of the day and sets sleep time
-    before a new capture and increasing/decreasing writeStep args accordingly
-    """
     def executer(self, execute=True, ctime=None):
+        """ service "core"
 
+        With the help of the getSun function (which use ephem module) in
+        calise.sun module, discovers current time of the day and sets sleep
+        time before a new capture and increasing/decreasing writeStep args
+        accordingly
+
+        """
         if not self.newcomers['cts']:
             self.getCts()
         if ctime is None:
@@ -295,11 +297,14 @@ class objects():
         sus_tw = int(sun[3])
 
         # sleeptime between captures
+        #
         # if ipotetically during daw_tw/sus_tw the backlight goes from max to
         # min, then there will be a step change every %x% sec, to be more
         # precise I decided to set sleeptime to %x% / 10
-        # EDIT: machines with more than 10000 backlight steps blowed up with
-        #       previous formulae, percentage will work better there
+        #
+        # EDIT: machines with more than 10000 backlight steps 'blowed-up' with
+        #       previous formula, percentage will work better there
+        #
         daw_sl = daw_tw / 100.0
         sus_sl = sus_tw / 100.0
 
@@ -307,15 +312,11 @@ class objects():
         if daw is True and sus is False:
             self.newcomers['css'] = "day"
             self.newcomers['nss'] = None
-            if execute:
-                self.autoWrite()
-            else:
-                self.getSbs()
             if self.arguments['weather']:
                 self.getWtr(cur_time)
             else:
                 self.daytime_mul = 0.6
-            sleepTime = 5.0 * self.daytime_mul * 60
+            sleepTime = self.arguments['dayst'] * self.daytime_mul
             if sleepTime + time.time() > self.newcomers['nss']:
                 sleepTime = self.newcomers['nss'] - time.time()
         # happens on artic regions, where the sun never reaches above the
@@ -323,42 +324,32 @@ class objects():
         elif daw is False and sus is True:
             self.newcomers['css'] = "night"
             self.newcomers['nss'] = None
-            if execute:
-                self.autoWrite()
+            if self.arguments['nightst'] == 0.0:
+                sleepTime = (
+                    int(datetime.date.today().strftime("%s")) +
+                    86400 - cur_time)
             else:
-                self.getSbs()
-            sleepTime = (
-                int(datetime.date.today().strftime("%s")) + 86400 - cur_time)
+                sleepTime = self.arguments['nightst']
         # happens on artic regions, where the sun never reaches 15 degrees
         # above the horizon, so, actually, dawn/sunset time equal half each of
         # the time the sun spend above the horizon
         elif sus == daw + daw_tw:
             if cur_time < daw + daw_tw / 2.0:
                 self.newcomers['css'] = "dawn"
-                if execute:
-                    self.autoWrite()
+                sleepTime = daw_sl * self.arguments['dusksm']
             else:
                 self.newcomers['css'] = "sunset"
-                if execute:
-                    self.autoWrite()
+                sleepTime = daw_sl * self.arguments['dusksm']
         # dawn
         elif cur_time > daw and cur_time <= daw + daw_tw:
             self.newcomers['css'] = "dawn"
             self.newcomers['nss'] = daw + daw_tw - cur_time
-            if execute:
-                self.autoWrite()
-            else:
-                self.getSbs()
-            sleepTime = daw_sl
+            sleepTime = daw_sl * self.arguments['dusksm']
         # sunset
         elif cur_time >= sus - sus_tw and cur_time < sus:
             self.newcomers['css'] = "sunset"
             self.newcomers['nss'] = sus - cur_time
-            if execute:
-                self.autoWrite()
-            else:
-                self.getSbs()
-            sleepTime = sus_sl
+            sleepTime = sus_sl * self.arguments['dusksm']
         # night
         elif cur_time > sus or cur_time < daw:
             # if current time is before midnight, ask for next day dawn
@@ -367,29 +358,29 @@ class objects():
                     self.arguments['latitude'], self.arguments['longitude'],
                     cur_time + 24 * 60 * 60)
                 daw = float(tmp[0])
+            if self.arguments['nightst'] == 0.0:
+                sleepTime = daw - cur_time
+            else:
+                sleepTime = self.arguments['nightst']
             self.newcomers['css'] = "night"
             self.newcomers['nss'] = daw - cur_time
-            if execute:
-                self.autoWrite()
-            else:
-                self.getSbs()
-            sleepTime = daw - cur_time
         # day
         else:
             self.newcomers['css'] = "day"
             self.newcomers['nss'] = sus - sus_tw - cur_time
-            if execute:
-                self.autoWrite()
-            else:
-                self.getSbs()
             if self.arguments['weather']:
                 self.getWtr(cur_time)
             else:
                 self.daytime_mul = 0.6
-            sleepTime = 5.0 * self.daytime_mul * 60
+            sleepTime = self.arguments['dayst'] * self.daytime_mul
             if sleepTime > self.newcomers['nss']:
                 sleepTime = self.newcomers['nss']
-
+        # *real* execute
+        if execute:
+            self.autoWrite()
+        else:
+            self.getSbs()
+        # process output value
         self.newcomers['slp'] = sleepTime
         if sleepTime < capture_time + 1.0:
             return capture_time + 1.0 + cur_time

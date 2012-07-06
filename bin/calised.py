@@ -170,35 +170,6 @@ def checkLogFileSyntax(string, defaultLogFile):
     return retCode
 
 
-# Check arguments syntax and if not present, set necessary optionals to default
-def checkSettingsArguments(defDict):
-    if not options.settings.keys().count('capnum'):
-        options.settings['capnum'] = defDict['capnum']
-    if not options.settings.keys().count('capint'):
-        options.settings['capint'] = defDict['capint']
-    # loglevel
-    if (
-        options.settings.keys().count('loglevel') and
-        checkLogLevelSyntax(options.settings['loglevel'], defDict['loglevel'])
-        ):
-        del options.settings['loglevel']
-    if not options.settings.keys().count('loglevel'):
-        options.settings['loglevel'] = defDict['loglevel']
-    # logfile
-    if (
-        options.settings.keys().count('logfile') and
-        checkLogFileSyntax(options.settings['logfile'], defDict['logfile'])
-        ):
-        del options.settings['logfile']
-    if not options.settings.keys().count('logfile'):
-        options.settings['logfile'] = defDict['logfile']
-    # geoip and weather lookup set True by default
-    if not options.settings.keys().count('geoip'):
-        options.settings['geoip'] = defDict['geoip']
-    if not options.settings.keys().count('weather'):
-        options.settings['weather'] = defDict['weather']
-
-
 # Check for missing necessary settings
 def checkMissingSettings(keys):
     retCode = 0
@@ -246,9 +217,9 @@ def mainService(kargs):
         prefix='%s-' % os.path.join(tempdir, __LowerName__), delete=False)
     # setting-related operations
     defaults = options.getDefaultSettings()
-    defaults['logfile'] = logObject.name
+    options.settings['logfile'] = logObject.name
     logLevel = defaults['loglevel']
-    logFile = defaults['logfile']
+    logFile = logObject.name
     lg = options.wlogger(logLevel, logFile)
     logger = logging.getLogger('.'.join([__LowerName__, 'root']))
     # Obtain valid profile
@@ -259,7 +230,7 @@ def mainService(kargs):
     # Parse arguments (seriously this time)
     kargs.init_args()
     kargs.parse_settings()
-    checkSettingsArguments(defaults)
+    options.checkSettingsArguments()
     if logLevel != options.settings['loglevel']:
         if checkLogLevelSyntax(options.settings['loglevel'], logLevel):
             options.settings['loglevel'] = logLevel

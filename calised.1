@@ -15,8 +15,11 @@ is negligible.
 
 .PP
 .SH GLOBAL OPTIONS
-.TP
-Options available either with service started or starting the service.
+Options available either with service started or starting the service. If sent
+to a started service will be effective only on next non-manual capture or after
+giving a
+.I \-\-restart
+command.
 .TP
 .B \-h, \-\-help
 Print a help screen and exit.
@@ -42,8 +45,9 @@ Lookup happens once per hour.
 
 Wheather lookup optimization feature grabs, through SSL connection to several
 APIs, weather conditions of profile-specified latitude/longitude from internet
-and sets a daytime multiplier accordingly, for example, if weather is 'cloudy',
-multiplier will be ~0.23, else if weather is 'clear' it will be 1.00.
+and sets a daytime multiplier accordingly (from 0.2 to 1.0), for example, if
+weather is 'cloudy', multiplier will be ~0.23, else if weather is 'clear' it
+will be 1.00.
 .TP
 .B \-\-location <lat>:<lon>
 Set current location. <lat> (latitude) and <lon> (longitude) have to be
@@ -66,6 +70,24 @@ The service executes once every X seconds (value obtained with the help
 of geolocation coordinates), and on every execution, takes some captures
 on a specified interval. These options control the number and the time interval
 of the captures.
+.TP
+.B \-\-twilight\-mul <float>
+Set the multiplier for dawn/sunset sleeptime.
+
+The service sets dawn/sunset sleeptime to (dawn/sunset duration * 0.01) * 0.8
+(where 0.8 is the default multiplier), setting a different multiplier will
+increase/decrease the sleeptime proportionally.
+.TP
+.B \-\-day\-sleeptime <float>
+Set maximum seconds between captures during the day.
+
+During the day (not night nor dawns/sunsets) the service takes a capture every
+X seconds. X can vary from X * 0.2 to X * 1.0 if weather lookup it's enabled
+(and internet connection available) or be equal to X * 0.6 elsewhere; this
+control sets X.
+.TP
+.B \-\-night\-sleeptime <float>
+Set seconds between captures at night, "0" means no captures (default).
 .TP
 .B \-\-loglevel <level>
 Set log <level> to either "critical", "error", "warning", "info" (default),
@@ -100,7 +122,9 @@ Pause capture thread.
 Resume capture thread (from a "pause" state).
 .TP
 .B \-\-restart
-Restart the capture thread (not really useful).
+Restart the capture thread. Read
+.I GLOBAL_OPTIONS
+description for further infos about that command.
 .TP
 .B \-c, \-\-capture
 Calculate and automatically set backlight step. The service can be either

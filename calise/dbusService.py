@@ -71,18 +71,34 @@ class whatsmyname(threading.Thread):
         self.logger = logging.getLogger('.'.join([__LowerName__, 'thread']))
         self.logger.info("Starting main Thread...")
         self.objectClass = objects.objects(settings)
-        self.cbs = self.objectClass.getCbs()
         # control "flags"
         self.stop = False
         self.pause = False
-        # threading.Thread initialization
+        # threading.Thread module initialization
         threading.Thread.__init__(self)
 
     def run(self):
+        ''' Thread core
+
+        Pretty simple:
+         - reset working dictionary (all vars to None)
+         - execute (execution options all managed by 'settings' var)
+         - store the data caoght
+         - log what happened
+         - sleep (read below for further info about that)
+
+        '''
         self.logger.info("Main Thread successfully started")
+        # self.cbs stores current backlight step to make event_logger able to
+        # log also first (eventual) backlight change
+        self.cbs = self.objectClass.getCbs()
         while self.stop is False:
             self.objectClass.resetComers()
+            if len(self.objectClass.oldies) == 0:
+                self.objectClass.arguments['capnum'] *= 3
             self.cycle_sleeptime = self.objectClass.executer()
+            if len(self.objectClass.oldies) == 0:
+                self.objectClass.arguments['capnum'] /=  3
             self.objectClass.append_data()
             self.event_logger()
             # the cycle below sleeps Nth time for 1 sec and meanwhile checks
@@ -487,6 +503,18 @@ class methodHandler():
             value = float(value)
             self.settings['capint'] = value
             self.th.objectClass.arguments['capint'] = value
+        elif idx in ['dayst']:
+            value = float(value)
+            self.settings['dayst'] = value
+            self.th.objectClass.arguments['dayst'] = value
+        elif idx in ['dusksm']:
+            value = float(value)
+            self.settings['dusksm'] = value
+            self.th.objectClass.arguments['dusksm'] = value
+        elif idx in ['nightst']:
+            value = float(value)
+            self.settings['nightst'] = value
+            self.th.objectClass.arguments['nightst'] = value
         else:
             retCode = 1
             self.logger.warning(
