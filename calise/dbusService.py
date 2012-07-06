@@ -94,11 +94,7 @@ class whatsmyname(threading.Thread):
         self.cbs = self.objectClass.getCbs()
         while self.stop is False:
             self.objectClass.resetComers()
-            if len(self.objectClass.oldies) == 0:
-                self.objectClass.arguments['capnum'] *= 3
             self.cycle_sleeptime = self.objectClass.executer()
-            if len(self.objectClass.oldies) == 0:
-                self.objectClass.arguments['capnum'] /=  3
             self.objectClass.append_data()
             self.event_logger()
             # the cycle below sleeps Nth time for 1 sec and meanwhile checks

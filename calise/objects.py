@@ -109,9 +109,11 @@ class objects():
             self.getCts()
         self.capture.startCapture()
         camValues = self.capture.getFrameBri(
-            self.arguments['capnum'], self.arguments['capint'])
+            self.arguments['capint'], self.arguments['capnum'])
         self.capture.stopCapture()
         camValues = processList(camValues)
+        self.logger.debug(
+            "Processed values: %s" % ', '.join(["%3d" % x for x in camValues]))
         self.newcomers['amb'] = sum(camValues) / float(len(camValues))
         return self.newcomers['amb']
 

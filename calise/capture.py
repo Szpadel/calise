@@ -8,6 +8,9 @@ from calise import screenBrightness
 from calise.infos import __LowerName__
 
 
+logger = logging.getLogger(".".join([__LowerName__, 'capture']))
+
+
 def processList(valList):
     ''' Complete standard deviation list check
 
@@ -40,23 +43,15 @@ def sdevListProcessor(lista):
               After a run of this function only X and Y are removed and only
               re-computing standard devaition leads to the removal of K and J.
     '''
-    devList = []
+    avg = sum(lista) / float(len(lista))
+    dev = sDev(lista, avg)
+    minimum = avg - dev
+    maximum = avg + dev
+    retList = []
     for idx in range(len(lista)):
-        newList = lista[:idx] + lista[idx + 1:]
-        avg = sum(newList) / float(len(newList))
-        dev = sDev(newList, avg)
-        devList.append(dev)
-    devListAvg = sum(devList) / len(devList)
-    devListDev = sDev(devList, devListAvg)
-    toBeErased = []
-    for idx in range(len(lista)):
-        try:
-            if devListDev > 0.75 and \
-                ((devList[idx] - devListAvg) ** 2) ** .5 > devListDev:
-                del lista[idx]
-        except IndexError:
-            break
-    return lista
+        if not dev > 3 or not (lista[idx] > maximum or lista[idx] < minimum):
+            retList.append(lista[idx])
+    return retList
 
 
 # siple standard deviation function (used by sdevListProcessor)
@@ -195,7 +190,7 @@ class imaging():
             # if not first *discarded* frame, set values
             if x != 0:
                 if retList is not None:
-                    retList.append(val)
+                    retList.append(int(val))
                 # if not last capture in capture loop sleep
                 if x < captures:
                     sleeptime = interval - time.time() + startTime
@@ -212,6 +207,8 @@ class imaging():
             if self.stop is True:
                 self.stop = None
                 break
+        logger.debug(
+            "Raw values: %s" % (', '.join(["%3d" % x for x in retList])))
         return retList
 
 

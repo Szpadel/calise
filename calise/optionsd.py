@@ -33,8 +33,8 @@ logger = logging.getLogger('.'.join([__LowerName__, 'options']))
 
 # Default settings
 defaultSettings = {
-    'capnum': 12,
-    'capint': .2,
+    'capnum': 10,
+    'capint': 0.1,
     'loglevel': 'info',
     'logfile': None,
     'geoip': True,
@@ -177,13 +177,15 @@ class serviceGetArgs():
         parser.add_argument(
             '--capture-number',
             metavar='<int>', dest='capnum', default=None,
-            help="set number of captures per \"capture session\" (default: 7)")
+            help=(
+                "set number of captures per \"capture session\" (default: %d)"
+                % defaultSettings['capnum']))
         parser.add_argument(
             '--capture-interval',
             metavar='<float>', dest='capint', default=None,
             help=(
                 "set seconds between consecutive captures in a \"capture "
-                "session\" (default: 0.5)"))
+                "session\" (default: %f)" % defaultSettings['capint']))
         parser.add_argument(
             '--weather',
             action='store_true', default=None, dest='yweather',
@@ -205,7 +207,8 @@ class serviceGetArgs():
             '--twilight-mul',
             metavar='<float>', dest='dusksm', default=None,
             help=(
-                "set the multiplier for dawn/sunset sleeptime (default: 0.8)"))
+                "set the multiplier for dawn/sunset sleeptime (default: %f)"
+                % defaultSettings['dusksm']))
         parser.add_argument(
             '--day-sleeptime',
             metavar='<float>', dest='dayst', default=None,
