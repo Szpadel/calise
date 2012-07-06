@@ -171,14 +171,15 @@ def get_daytime_mul(lat, lon):
             'overcast': minimum + step * 1,            # 8/8 coverage
             # Others
             'scattered clouds': minimum + step * 5.5,  # 10% to 50% coverage
-            'chance of rain': minimum + step * 3,
-            'light rain': minimum + step * 2,
-            'rain': minimum + step * 1,
+            'chance of rain': minimum + step * 4,
+            'light rain': minimum + step * 3,
+            'rain': minimum + step * 1.5,
             'chance of storm': minimum + step * 3,
             'light storm': minimum + step * 2,
             'storm': minimum + step * 1,
-            'chance of snow': minimum + step * 3,
-            'light snow': minimum + step * 2.5,
+            'thunderstorm': minimum + step * 1,
+            'chance of snow': minimum + step * 4,
+            'light snow': minimum + step * 3,
             'snow': minimum + step * 2,
             'Mist': minimum + step * 5,
             'Fog': minimum + step * 3,

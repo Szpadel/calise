@@ -23,7 +23,6 @@ import threading
 import math
 import time
 from random import random
-from subprocess import Popen, PIPE
 from xdg.BaseDirectory import save_config_path, load_config_paths
 import textwrap
 from select import select
@@ -71,7 +70,7 @@ def getMinimumLevel(blpath):
                 "this machine.") % x)
             dummy = query_yes_no(customWrap(_(
                 "Are you (even somehow) able to see this message?")),
-                default='no', timeout=30)
+                default='no', timeout=20)
             with open(blpath, 'w') as fp:
                 fp.write(str(currentLevel))
             if dummy == 'yes':
@@ -85,51 +84,43 @@ def getMinimumLevel(blpath):
     return None
 
 
-# Just a bad, hackish function to obtain data from udevadm
-# Reads from UDEV's class video4linux specified device following standard
-# naming rules... if device name was customized things may go bad
 def UdevQuery(interface='/dev/video0'):
     UDevice = {
-        'DEVICE': None,
         'KERNEL': None,
+        'DEVICE': None,
         'SUBSYSTEM': None,
         'DRIVER': None,
         'ATTR': {},
     }
-    txt = []
+    # KERNEL
     if os.path.islink(interface):
         link = os.readlink(interface)
         if link.startswith('/'):
             interface = link
         else:
-            interface = '%s%s' % (interface[:5], link)
-    itf = interface[5:]
-    pcs = Popen([
-            'udevadm', 'info', '-a', '-p',
-            '%s%s' % ('/sys/class/video4linux/',
-            itf)], stdout=PIPE, stderr=PIPE)
-    pcl = pcs.communicate()
-    for item in pcl[0].split('\n\n'):
-        if item.count(itf) > 0:
-            for line in item.splitlines():
-                if line.startswith('    '):
-                    txt.append(line.lstrip('    '))
-                elif line.startswith('  '):
-                    line = line.lstrip('  looking at device \'').rstrip('\':')
-                    UDevice['DEVICE'] = (
-                        '/'.join(line.strip().split('\'')[0].split('/')[:-5]))
-    for item in UDevice:
-        if type(UDevice[item]) == dict:
-            for line in txt:
-                if line.count('}==') > 0:
-                    voice = line.split('==')[0].\
-                        lstrip(item + '{').rstrip('}').strip()
-                    UDevice[item][voice] = line.split('==')[1].\
-                        strip('\"').strip()
-        else:
-            for line in txt:
-                if line.startswith(item):
-                    UDevice[item] = line.split('==')[1].strip('\"').strip()
+            interface = '%s%s' % (os.path.dirname(interface), link)
+    UDevice['KERNEL'] = interface.split('/')[-1]
+    #DEVICE
+    devicesPath = os.path.join('/sys', 'class', 'video4linux')
+    devicePath = os.path.join(devicesPath, UDevice['KERNEL'])
+    td = []
+    if os.path.islink(devicePath):
+        for x in os.readlink(devicePath).split('/'):
+            if x != '..':
+                td.append(x)
+    UDevice['DEVICE'] = os.path.join('/', td[0], td[1], td[2])
+    # SUBSYSTEM
+    subsystemPath = os.path.join(devicePath, 'subsystem')
+    if os.path.islink(subsystemPath):
+        UDevice['SUBSYSTEM'] = os.readlink(subsystemPath).split('/')[-1]
+    # DRIVER
+    UDevice['DRIVER'] = ''
+    # ATTR
+    for path in os.listdir(devicePath):
+        tmpPath = os.path.join(devicePath, path)
+        if os.path.isfile(tmpPath) and path != 'dev' and path != 'uevent':
+            with open(tmpPath, 'r') as fp:
+                UDevice['ATTR'][path] = ' '.join(fp.read().split())
     return UDevice
 
 
@@ -570,7 +561,8 @@ class CliCalibration():
                 "machine.") + '\n')
             fprnt(_(
                 "NOTE: If you'll get a blank screen (power-off) don't worry "
-                "and just wait the default timeout (30 seconds)") + '\n')
+                "and just wait the default timeout (20 seconds per step "
+                "check)") + '\n')
             raw_input(customWrap(_("Hit ENTER or RETURN when ready")))
             print("")
             bkofs = getMinimumLevel(self.bfile)

@@ -5,25 +5,26 @@ Generic Installation
 NOTE: for differences in distro-specific installation refer below
 
   Get these needed python2 modules:
-    PIL (python imaging): http://www.pythonware.com/products/pil/
-    NumPy: http://numpy.scipy.org/
-    PyGame: http://www.pygame.org/
+    dbus
+    gobject2
     xdg
     ephem: http://rhodesmill.org/pyephem/
 
-  Plus these for building/installing:
+  Plus, these for building/installing (you can safely remove them after you
+  completed calise installation):
     python distutils
     python distutils-extra: http://www.glatzor.de/projects/python-distutils-extra/
     gcc & everything needed to build C programs
     libx11 developement libraries
     python developement libraries
+    kernel headers
     intltool
 
   If you want to use the gui of non-daemon version you also need:
     PyQt4: http://www.riverbankcomputing.co.uk/software/pyqt/download
 
 
-  Now you're ready for building/installing the program, move to the folder 
+  Now you're ready for building/installing the program, move to the folder
   where you extracted calise and run:
     $ env python2 setup.py build
     # env python2 setup.py install --prefix=/usr
@@ -41,10 +42,10 @@ NOTE: for differences in distro-specific installation refer below
 
           After that you can continue calibration.
 
-  The permission change just applied will reset on reboot since it's managed 
+  The permission change just applied will reset on reboot since it's managed
   by udev. In order to make "permanent" changes you have to add a udev rule.
-  However it's not good to set permanent write permission also for "guest", 
-  to avoid that you can set write permission for video group users (or the 
+  However it's not good to set permanent write permission also for "guest",
+  to avoid that you can set write permission for video group users (or the
   group you think swits better)
   Here's how to achieve that (in most distributions, check for udev's rules.d
   directory position, can also be "/lib/udev/rules.d" or others):
@@ -75,23 +76,29 @@ NOTE: for differences in distro-specific installation refer below
 
 
   Now you have (hopefully) correctly installed and first configured calise.
-  To see what you can do now you may take a look at README, man pages and/or
-  cli help options:
-    calise --help
-    calised --help
+  To see what you can do now you may take a look at man pages (suggested):
+    $ man calise
+    $ man calised
+  and/or cli help options:
+    $ calise --help
+    $ calised --help
 
 
 
 Ubuntu (tested on 11.04, 11.10 and 12.04 but also previous should work fine)
 
-  You have to prepare the system so, first enable community repository (for 
+  You have to prepare the system so, first enable community repository (for
   pygame) then run:
-    # apt-get install python-imaging python-qt4 python-numpy python-pygame python-setuptools python-distutils-extra python-xdg build-essential python-dev libx11-dev python-pip python-dbus
+    # apt-get install python-setuptools python-distutils-extra python-xdg build-essential python-dev libx11-dev python-pip python-dbus linux-headers-`uname -r`
     # pip install pyephem
+
+  Plus, if you want the gui:
+    # apt-get install python-qt4
+
 
   Move to the folder where you extracted calise and run:
     $ env python setup.py build
-    # env python setup.py install  --install-layout=deb
+    # env python setup.py install --install-layout=deb
 
   Remaining passages should be the same as generic installation
 
