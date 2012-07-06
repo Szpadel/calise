@@ -113,7 +113,7 @@ class objects():
         self.capture.stopCapture()
         camValues = processList(camValues)
         self.logger.debug(
-            "Processed values: %s" % ', '.join(["%3d" % x for x in camValues]))
+            "Processed values: %s" % ', '.join(["%d" % x for x in camValues]))
         self.newcomers['amb'] = sum(camValues) / float(len(camValues))
         return self.newcomers['amb']
 

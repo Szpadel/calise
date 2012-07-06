@@ -208,7 +208,7 @@ class imaging():
                 self.stop = None
                 break
         logger.debug(
-            "Raw values: %s" % (', '.join(["%3d" % x for x in retList])))
+            "Raw values: %s" % (', '.join(["%d" % x for x in retList])))
         return retList
 
 
@@ -244,6 +244,10 @@ class imaging():
                     cw = self.ctrls[idx]['min']
                     if self.ctrls[idx]['old'] != cw:
                         self.cameraObj.setCtrl(x, cw)
+                        logger.debug(
+                            "\'v4l2-%s\' set from %s to %s" % (
+                                self.ctrls[idx]['name'],
+                                self.ctrls[idx]['old'], cw))
                     self.ctrls[idx]['new'] = cw
             except camera.Error as err:
                 # errno 22 means control is not available
@@ -262,6 +266,11 @@ class imaging():
                     % (self.ctrls[idx]['name'], x))
             if self.ctrls[idx]['new'] != self.ctrls[idx]['old']:
                 self.cameraObj.setCtrl(x, self.ctrls[idx]['old'])
+                logger.debug(
+                    "\'v4l2-%s\' restored to %s from %s" % (
+                        self.ctrls[idx]['name'],
+                        self.ctrls[idx]['old'],
+                        self.ctrls[idx]['new']))
 
     # obtains %scr (screen brightness in /255)
     def getScreenBri(self):
