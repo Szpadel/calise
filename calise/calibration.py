@@ -777,8 +777,8 @@ class CliCalibration():
                     curStep = int(round(
                         self.bkofs - 1 + percentage / (100.0 / self.steps), 0
                     ))
-                    if curStep >= self.steps:
-                        curStep = self.steps - 1
+                    if curStep >= self.steps - 1 + self.bkofs:
+                        curStep = self.steps - 1 + self.bkofs
                     cap.getScreenBri()
                     valThread.adjustValues(cap.scr)
                     try:
