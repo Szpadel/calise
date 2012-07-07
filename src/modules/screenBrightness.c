@@ -2,11 +2,14 @@
 #include <stdio.h>
 #include <X11/Xlib.h>
 
+/* standard cameramodule python-error */
+//static PyObject* ScreenError;
+
 /* functions available to module users */
-static PyObject* getDisplayBrightness (PyObject* self);
+static PyObject* getDisplayBrightness (PyObject* self, PyObject *args);
 
 /* functions for internal use */
-static int getRootBrightness()
+static int getRootBrightness(char* screen_name)
 {
     Display
         *display;
@@ -24,7 +27,11 @@ static int getRootBrightness()
     float
         pct;
 
-    display = XOpenDisplay((char *) NULL);
+    display = XOpenDisplay(screen_name);
+    if ( !display )
+    {
+        return NULL;
+    }
 
     // window frame size definition
     pct = 0.85;
@@ -72,22 +79,37 @@ static int getRootBrightness()
 
 
 static PyObject *
-getDisplayBrightness(PyObject *self)
+getDisplayBrightness(PyObject *self, PyObject *args)
 {
+    char* screen_name = NULL;
+
+    if (!PyArg_ParseTuple(args, "s", &screen_name))
+        return NULL;
+
     // call brightness function and return int /255 brightness value
     int screenBrightnessValue;
-    screenBrightnessValue = getRootBrightness();
+
+    screenBrightnessValue = getRootBrightness(screen_name);
+    if ( !screenBrightnessValue ) {
+        Py_RETURN_NONE;
+    }
+
     return Py_BuildValue("i", screenBrightnessValue);
 }
 
 /* Python related stuff */
 static PyMethodDef screenBrightness_funcs[] = {
-    {"getDisplayBrightness", (PyCFunction)getDisplayBrightness, METH_NOARGS},
+    {"getDisplayBrightness", (PyCFunction)getDisplayBrightness, METH_VARARGS},
     {NULL}
 };
 
-void initscreenBrightness(void)
+PyMODINIT_FUNC initscreenBrightness(void)
 {
+    //PyObject* m;
+
     Py_InitModule3("screenBrightness", screenBrightness_funcs,
                    "Display brightness calculator module");
+    //ScreenError = PyErr_NewException("screenBrightnessmodule.ScreenError", NULL, NULL);
+    //if (ScreenError)
+    //    PyModule_AddObject(m, "Error", ScreenError);
 }

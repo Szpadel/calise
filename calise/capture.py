@@ -3,6 +3,8 @@ import errno
 import time
 import logging
 
+from subprocess import Popen, PIPE
+
 from calise import camera
 from calise import screenBrightness
 from calise.infos import __LowerName__
@@ -97,6 +99,7 @@ class imaging():
         self.stop = None        # readFrame loop control flag
         self.logger = logging.getLogger(".".join([__LowerName__, 'capture']))
         self.deviceStatus = None
+        self.authorizer = None
 
     # defines the camera to be used, path has to be a valid device path like
     # '/dev/video', if no path is given, first cam of camera.camPaths is taken
@@ -274,7 +277,109 @@ class imaging():
 
     # obtains %scr (screen brightness in /255)
     def getScreenBri(self):
-        if os.getenv('DISPLAY'):
-            self.scr = int(screenBrightness.getDisplayBrightness())
-        else:
-            self.scr = 0.0
+        self.scr = 0
+        display = os.getenv('DISPLAY')
+        if not display and os.getuid() == 0:
+            if self.authorizer is None:
+                self.authorizer = secessionist()
+                self.authorizer.getActiveSeat()
+            if self.authorizer.seat:
+                self.authorizer.getActiveSession()
+            if self.authorizer.session:
+                display = self.authorizer.getActiveDisplay()
+            if self.authorizer.display:
+                activeUser = self.authorizer.getActiveUser()
+                xauthority = getXauthority(activeUser)
+                if xauthority != os.getenv('XAUTHORITY'):
+                    os.environ['XAUTHORITY'] = xauthority
+                    logger.debug("X11 authority set to %s" % xauthority)
+        if display:
+            scr = screenBrightness.getDisplayBrightness(display)
+            if scr:
+                self.scr = scr
+        logger.debug("Screen capture returned %s" % self.scr)
+        return self.scr
+
+
+class secessionist():
+
+    def __init__(self):
+        self.bus = None
+        self.busObject = 'org.freedesktop.ConsoleKit'
+        self.busPath = '/org/freedesktop/ConsoleKit'
+        self.seat = None
+        self.session = None
+        self.xauthority = None
+
+    def getActiveSeat(self):
+        self.seat = None
+        cliArg = [
+            'dbus-send', '--system', '--print-reply', '--type=method_call',
+            '--dest=%s' % self.busObject, "%s/Manager" % self.busPath,
+            '%s.Manager.GetSeats' % self.busObject,]
+        p = Popen(cliArg, stdout=PIPE, stderr=PIPE)
+        r = p.communicate()
+        for line in r[0].splitlines():
+            if line.count(self.busPath):
+                self.seat = line.split('\"')[1]
+        return self.seat
+
+    def getActiveSession(self):
+        self.session = None
+        cliArg = [
+            'dbus-send', '--system', '--print-reply', '--type=method_call',
+            '--dest=%s' % self.busObject, self.seat,
+            '%s.Seat.GetActiveSession' % self.busObject,]
+        p = Popen(cliArg, stdout=PIPE, stderr=PIPE)
+        r = p.communicate()
+        for line in r[0].splitlines():
+            if line.count(self.busPath):
+                self.session = line.split('\"')[1]
+        return self.session
+
+    def getActiveDisplay(self):
+        self.display = None
+        cliArg = [
+            'dbus-send', '--system', '--print-reply', '--type=method_call',
+            '--dest=%s' % self.busObject, self.session,
+            '%s.Session.GetX11Display' % self.busObject,]
+        p = Popen(cliArg, stdout=PIPE, stderr=PIPE)
+        r = p.communicate()
+        for line in r[0].splitlines():
+            if line.count('string'):
+                self.display = line.split('\"')[1]
+        return self.display
+
+    def getActiveUser(self):
+        self.display = None
+        cliArg = [
+            'dbus-send', '--system', '--print-reply', '--type=method_call',
+            '--dest=%s' % self.busObject, self.session,
+            '%s.Session.GetUnixUser' % self.busObject,]
+        p = Popen(cliArg, stdout=PIPE, stderr=PIPE)
+        r = p.communicate()
+        for line in r[0].splitlines():
+            if line.count('uint32'):
+                self.display = line.split()[1]
+        return self.display
+
+
+def getUsernameFromUid(uid):
+    retVal = None
+    with open(os.path.join('/etc', 'passwd'), 'r') as fp:
+        passwd = fp.readlines()
+    for line in passwd:
+        rec = line.split(':')
+        if rec[2] == str(uid):
+            retVal = rec[0]
+            break
+    return retVal
+
+
+def getXauthority(usr):
+    retVal = None
+    username = getUsernameFromUid(usr)
+    xauthPath = os.path.join('/home', username, '.Xauthority')
+    if os.path.isfile(xauthPath):
+        retVal = xauthPath
+    return retVal
