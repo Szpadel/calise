@@ -60,7 +60,6 @@ def getMinimumLevel(blpath):
         currentLevel = int(fp.read())
     startTime = time.time()
     x = 0
-    # NOTE: there's no anti-infiniteLoop check
     while True:
         try:
             with open(blpath, 'w') as fp:
@@ -69,15 +68,14 @@ def getMinimumLevel(blpath):
                 "This (%d) should be the minimum backlight step possible on "
                 "this machine.") % x)
             dummy = query_yes_no(customWrap(_(
-                "Are you (even somehow) able to see this message?")),
+                "Are you able to see this message?")),
                 default='no', timeout=20)
             with open(blpath, 'w') as fp:
                 fp.write(str(currentLevel))
             if dummy == 'yes':
                 return x
             else:
-                x += 1
-                print("")
+                break
         except IOError as err:
             if err.errno == 22:
                 x += 1
@@ -560,15 +558,16 @@ class CliCalibration():
                 "minimum backlight level (before \"power-off\") for this "
                 "machine.") + '\n')
             fprnt(_(
-                "NOTE: If you'll get a blank screen (power-off) don't worry "
-                "and just wait the default timeout (20 seconds per step "
-                "check)") + '\n')
+                "NOTE: If you'll get a blank screen don't worry and "
+                "just wait the default timeout (20 seconds)") + '\n')
             raw_input(customWrap(_("Hit ENTER or RETURN when ready")))
             print("")
             bkofs = getMinimumLevel(self.bfile)
             if bkofs is None:
                 raw_input(customWrap(_(
-                    "Set the backlight to minimum then hit RETURN or ENTER")))
+                    "Auto-get minimum backlight step somehow failed, "
+                    "trying to obtain the hard-way, set the backlight to "
+                    "minimum then hit RETURN or ENTER")))
                 bkofs = step0.bkstp
             steps = step0.bkmax
             if steps < bkofs:
