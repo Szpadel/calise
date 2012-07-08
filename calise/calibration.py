@@ -834,7 +834,7 @@ class CliCalibration():
         fprnt(_("Building a config file with the choosen settings..."))
         config = ConfigParser.RawConfigParser()
         config.add_section('Camera')
-        config.set('Camera', 'camera', str(self.camera))
+        config.set('Camera', 'device', str(self.camera))
         config.set('Camera', 'delta', str(self.delta))
         config.set('Camera', 'offset', str(self.offset))
         config.add_section('Backlight')

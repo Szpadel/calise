@@ -385,9 +385,12 @@ class methodHandler():
         if self.th is not None:
             if self.th.isAlive():
                 self.th.stop = True
-                self.th.join(
+                joinTime = (
                     self.th.objectClass.arguments['capnum'] *
                     self.th.objectClass.arguments['capint'] * 3)
+                if joinTime < 5:
+                    joinTime = 5
+                self.th.join(joinTime)
                 if self.th.isAlive():
                     self.th = None
                     return 1
@@ -483,6 +486,10 @@ class methodHandler():
             value = strToBool(value)
             self.settings['weather'] = value
             self.th.objectClass.arguments['weather'] = value
+        elif idx in ['screen']:
+            value = strToBool(value)
+            self.settings['screen'] = value
+            self.th.objectClass.arguments['screen'] = value
         elif idx in ['latitude']:
             value = float(value)
             self.settings['latitude'] = value

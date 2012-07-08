@@ -121,8 +121,11 @@ class objects():
     def getScr(self):
         if not self.newcomers['cts']:
             self.getCts()
-        self.capture.getScreenBri()
-        self.newcomers['scr'] = self.capture.scr
+        if self.arguments['screen'] is True:
+            self.capture.getScreenBri()
+            self.newcomers['scr'] = self.capture.scr
+        else:
+            self.newcomers['scr'] = 0
         return self.newcomers['scr']
 
     # obtains brightness percentage value, corrected if needed (by the amount
@@ -188,9 +191,9 @@ class objects():
             increasing = not increasing
         refer = int(self.newcomers['sbs']) - int(self.newcomers['cbs'])
         if ((
-            refer > 0 and increasing is True) or (    # dawn condition
-            refer < 0 and increasing is False) or (   # sunset condition
-            abs(refer) > 1) or (                      # room light lit/shut
+            #refer > 0 and increasing is True) or (    # dawn condition
+            #refer < 0 and increasing is False) or (   # sunset condition
+            #abs(refer) > 1) or (                      # room light lit/shut
             abs(refer) > 0 and increasing is None)):  # normal statement
             try:
                 fp = open(bfile, 'w')

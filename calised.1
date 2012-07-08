@@ -28,7 +28,7 @@ Print a help screen and exit.
 Print program name and version and exit.
 .TP
 .B \-\-no-geoip/\-\-geoip
-Enable/disable geoip internet lookup. Is set to True by default.
+Disable/Enable geoip internet lookup. Is set to True by default.
 Lookup happens once per half an hour.
 
 Geoip lookup is done with SSL connection to "geoiplookup.wikimedia.org".
@@ -39,8 +39,22 @@ and
 but if you're not in a fixed place avoids you to manually set location every
 time it changes.
 .TP
+.B \-\-no-screen/\-\-screen
+Disable/Enable screen-brightness compensation. Is set to True by default.
+
+The screen has a certain amount of backlight that can lead to imprecision of
+capture values obtained. With bright ambient brightness the amount of
+imprecision is negligible but when the ambient brightness is low, error
+can be even more than 10/255. Screen-brightness compensation can correct that
+error up to 80%.
+
+To see if your screen isn't that bright to need this contol being active try
+that: with low light (not complete darkness though) let the screen be as
+"white" as possible (open a white image or so), do a capture *with* the
+control enabled and, same situation and setting, one *without*. Compare.
+.TP
 .B \-\-no-weather/\-\-weather
-Enable/disable weather internet lookup. Is set to True by default.
+Disable/Enable weather internet lookup. Is set to True by default.
 Lookup happens once per hour.
 
 Wheather lookup optimization feature grabs, through SSL connection to several

@@ -33,10 +33,11 @@ logger = logging.getLogger('.'.join([__LowerName__, 'options']))
 
 # Default settings
 defaultSettings = {
-    'capnum': 10,
+    'capnum': 7,
     'capint': 0.1,
     'loglevel': 'info',
     'logfile': None,
+    'screen': True,
     'geoip': True,
     'weather': True,
     'dayst': 300.0,
@@ -187,6 +188,14 @@ class serviceGetArgs():
                 "set seconds between consecutive captures in a \"capture "
                 "session\" (default: %f)" % defaultSettings['capint']))
         parser.add_argument(
+            '--screen',
+            action='store_true', default=None, dest='yscreen',
+            help="enable screen-brightness compensation")
+        parser.add_argument(
+            '--no-screen',
+            action='store_true', default=None, dest='nscreen',
+            help="disable screen-brightness compensation")
+        parser.add_argument(
             '--weather',
             action='store_true', default=None, dest='yweather',
             help="enable weather internet lookup")
@@ -248,17 +257,19 @@ class serviceGetArgs():
         self.parser = parser
 
     def parse_settings(self):
+        ''' Settings parser
+
+        NOTE: Service execution related arguments won't be processed there
+              since service communication is done through command existence
+              in args variable (actual command content isn't processed).
+              At the end of this function all service commands with value
+              None are stripped so that only given commands remain.
+
+                eg. args = {'kill': 0, 'dump': "zaczac"} -> kill, dump
+                eg. args = {'kill': False, 'dump': 1}    -> kill, dump
+        '''
         global settings
         args = self.arguments
-        # NOTE: Service execution related arguments won't be processed there
-        #       since service communication is done through command existence
-        #       in args variable (actual command content isn't processed).
-        #       At the end of this function all service commands with value
-        #       None are stripped so that only given commands remain.
-        #
-        #       eg. args = {'kill': 0, 'dump': "zaczac"} -> kill, dump
-        #       eg. args = {'kill': False, 'dump': 1}    -> kill, dump
-        #
         # Settings related arguments
         if args['pname']:
             settings['profile'] = args['pname']
@@ -271,6 +282,10 @@ class serviceGetArgs():
             settings['capnum'] = int(args['capnum'])
         if args['capint']:
             settings['capint'] = float(args['capint'])
+        if args['yscreen']:
+            settings['screen'] = True
+        elif args['nscreen']:
+            settings['screen'] = False
         if args['yweather']:
             settings['weather'] = True
         elif args['nweather']:
@@ -292,17 +307,25 @@ class serviceGetArgs():
         if args['logfile']:
             settings['logfile'] = args['logfile']
         # Arguments variable post-processing
-        # every service execution's related var is added to $exec_args
-        exec_args = {}  # dictionary object
+        # every service execution's related var is added to $serviceArgs
+        serviceArgs = {}  # dictionary object
+        queryArgs = {}
+        execArgs = {}
         for key in args.keys():
             if args[key] is not None:
                 if key in serviceCommands:
-                    exec_args[key] = args[key]
+                    serviceArgs[key] = args[key]
+                    if key in queryCommands:
+                        queryArgs[key] = args[key]
+                    if key in execCommands:
+                        execArgs[key] = args[key]
             else:
                 del args[key]
         # arguments export
         self.args = args
-        self.exec_args = exec_args
+        self.serviceArgs = serviceArgs
+        self.queryArgs = queryArgs
+        self.execArgs = execArgs
 
 
 class profiler():
@@ -314,6 +337,7 @@ class profiler():
             'offset': (float, 'offset'),
             'delta': (float, 'delta'),
             'camera': (str, 'cam'),
+            'device': (str, 'cam'),
         },
         'Backlight': {
             'steps': (int, 'steps'),
@@ -324,29 +348,29 @@ class profiler():
         'Service': {
             'latitude': (float, 'latitude'),
             'longitude': (float, 'longitude'),
-            'capnum': (int, 'capnum'),
-            'capint': (float, 'capint'),
+            'capture-number': (int, 'capnum'),
+            'capture-interval': (float, 'capint'),
             'geoip': (bool, 'geoip'),
             'weather': (bool, 'weather'),
-            'dayst': (float, 'dayst'),
-            'nightst': (float, 'nightst'),
-            'dusksm': (float, 'dusksm'),
+            'day-sleeptime': (float, 'dayst'),
+            'night-sleeptime': (float, 'nightst'),
+            'twilight-multiplier': (float, 'dusksm'),
             },
         'Daemon': {
             'latitude': (float, 'latitude'),
             'longitude': (float, 'longitude'),
-            'capnum': (int, 'capnum'),
-            'capint': (float, 'capint'),
+            'capture-number': (int, 'capnum'),
+            'capture-interval': (float, 'capint'),
             'geoip': (bool, 'geoip'),
             'weather': (bool, 'weather'),
-            'dayst': (float, 'dayst'),
-            'nightst': (float, 'nightst'),
-            'dusksm': (float, 'dusksm'),
+            'day-sleeptime': (float, 'dayst'),
+            'night-sleeptime': (float, 'nightst'),
+            'twilight-multiplier': (float, 'dusksm'),
         },
         'Advanced': {
             'average': (int, 'avg'),
-            'delay': (float, 'gap'),
-            'screen': (bool, 'screen'),
+            'capture-delay': (float, 'gap'),
+            'screen-compensation': (bool, 'screen'),
         },
         'Info': {
             'loglevel': (str, 'loglevel'),

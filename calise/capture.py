@@ -184,8 +184,10 @@ class imaging():
             self.stop = False
         if keep is True:
             retList = []
+            addList = []
         else:
             retList = None
+            addList = None
         x = 0
         while x < captures + 1:
             startTime = time.time()
@@ -193,12 +195,33 @@ class imaging():
             # if not first *discarded* frame, set values
             if x != 0:
                 if retList is not None:
-                    retList.append(int(val))
-                # if not last capture in capture loop sleep
+                    if len(retList) < captures:
+                        retList.append(int(val))
+                    elif len(retList) == captures:
+                        addList.append(int(val))
+                # if not last step in schedule sleep
                 if x < captures:
                     sleeptime = interval - time.time() + startTime
                     if sleeptime > 0:
                         time.sleep(sleeptime)
+                # last step, after last capture in schedule
+                if x == captures and retList is not None:
+                    if len(addList) == 0:
+                        logger.debug(
+                            "Raw values: %s" %
+                            (', '.join(["%d" % k for k in retList])))
+                    # if capture precision is too low, keep capturing
+                    if len(processList(retList + addList)) < 3:
+                        # log that the program it's going to do additional
+                        # captures only one time
+                        if len(addList) == 0:
+                            logger.info(
+                                "Capture precision is too low, requesting "
+                                "additional captures")
+                        sleeptime = interval - time.time() + startTime
+                        if sleeptime > 0:
+                            time.sleep(sleeptime)
+                        x -= 1
             # after having *discarded* first frame, set 'x' according to
             # 'self.stop' value
             if self.stop is False:
@@ -210,8 +233,11 @@ class imaging():
             if self.stop is True:
                 self.stop = None
                 break
-        logger.debug(
-            "Raw values: %s" % (', '.join(["%d" % x for x in retList])))
+        if addList is not None and len(addList) > 0:
+            logger.debug(
+                "Additional values: %s" %
+                (', '.join(["%d" % k for k in addList])))
+            retList += addList
         return retList
 
 
@@ -302,6 +328,18 @@ class imaging():
 
 
 class secessionist():
+    ''' ConsoleKit DBus query to get (eventual) Active X11 session
+
+    When the program is executed as root, outside user session, the
+    enviroment variable DISPLAY is not set and so, to get it it's needed
+    to know: active seat, active user and (of course) if user has a X11
+    display open and active.
+
+    NOTE: Right now, the only way I found to know that is to query DBUS
+          interface "org.freedesktop.ConsoleKit" *but* doing that natively
+          failed due to a dbus-module SEGFAULT, as workaround I used
+          subprocessed dbus-send calls.
+    '''
 
     def __init__(self):
         self.bus = None
