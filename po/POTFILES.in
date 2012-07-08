@@ -3,3 +3,4 @@
 bin/calise
 calise/options.py
 calise/calibration.py
+calise/QtGui.py
