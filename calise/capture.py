@@ -125,12 +125,14 @@ class imaging():
         self.cameraObj.openPath()
         self.adjustCtrls()
         self.cameraObj.initialize()
+        logger.debug("[HEAVY] start capturing...")
         self.cameraObj.startCapture()
         self.deviceStatus = True
 
     def stopCapture(self):
         if self.deviceStatus is False:
             return
+        logger.debug("[HEAVY] stop capturing...")
         self.cameraObj.stopCapture()
         self.cameraObj.uninitialize()
         self.restoreCtrls()
@@ -148,12 +150,23 @@ class imaging():
         self.cameraObj = None
 
     def getFrameBriSimple(self):
+        expiryTimer = time.time()
         val = None
         while val is None:
+            logger.debug("[HEAVY] taking a frame...")
             try:
                 val = self.cameraObj.readFrame()
             except camera.Error as err:
-                if errno.EAGAIN == err[0]:
+                if time.time() - expiryTimer > 30:
+                    logger.critical(
+                        "Unable to access camera device; 30 seconds anti-lock"
+                        "timer expired, closing.")
+                    self.stopCapture()
+                    self.freeCameraObj()
+                    raise
+                elif errno.EAGAIN == err[0]:
+                    logger.debug(
+                        "[HEAVY] cought EAGAIN error, passing.")
                     time.sleep(1.0 / 30.0)  # 1/30 is arbitrary
                 else:
                     raise
