@@ -3,12 +3,16 @@
 . /etc/rc.conf
 . /etc/rc.d/functions
 
+get_pid_ps() {
+    ps -C $1 -o pid --no-headers || return 1
+}
+
 DAEMON=calised
 ARGS=
 
 [ -r /etc/conf.d/$DAEMON ] && . /etc/conf.d/$DAEMON
 
-PID=$(get_pid $DAEMON)
+PID=$(get_pid_ps $DAEMON)
 
 case "$1" in
     start)
