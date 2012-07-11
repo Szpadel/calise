@@ -148,12 +148,20 @@ class imaging():
         self.cameraObj = None
 
     def getFrameBriSimple(self):
+        expiryTimer = time.time()
         val = None
         while val is None:
             try:
                 val = self.cameraObj.readFrame()
             except camera.Error as err:
-                if errno.EAGAIN == err[0]:
+                if time.time() - expiryTimer > 30:
+                    logger.critical(
+                        "Unable to access camera device; 30 seconds anti-lock"
+                        "timer expired, closing.")
+                    self.stopCapture()
+                    self.freeCameraObj()
+                    raise
+                elif errno.EAGAIN == err[0]:
                     time.sleep(1.0 / 30.0)  # 1/30 is arbitrary
                 else:
                     raise
@@ -164,7 +172,7 @@ class imaging():
         ''' Get brightness from a camera frame
 
         Inside the C module camera takes a 160x120 picture and computes its
-        brightness. If camera is not readyd yet, a CameraError.EAGAIN is
+        brightness. If camera is not ready yet, a CameraError.EAGAIN is
         raised.
 
         NOTE: C module has 1 frame buffered (should change this behavior) so

@@ -333,7 +333,7 @@ def main():
                 return 21
             else:
                 raise
-        # set setting command processing
+        # "set setting" command processing
         for setting in options.settings:
             if setting != 'profile':
                 ans = service.get_dbus_method('settingset', busObject)
@@ -345,8 +345,8 @@ def main():
                         print(
                             "[WARNING] You are not allowed to set "
                             "settings inside the service")
-                # service commands processing
-        for command in ap.execArgs.keys() + ap.queryArgs.keys():
+        # "service execution" command processing
+        for command in ap.queryArgs.keys() + ap.execArgs.keys():
             ans = service.get_dbus_method(command, busObject)
             try:
                 print ans()
