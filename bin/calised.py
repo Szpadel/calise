@@ -299,6 +299,13 @@ def main():
     # client query
     # if service is active, cli arguments are managed as execution commands
     if tmp == 0:
+        # remove default profile setting since it cannot be changed during
+        # service execution
+        del options.settings['profile']
+        # check if no arguments are being passed
+        if not options.settings.keys() + ap.serviceArgs.keys():
+            print "error: a service should be already running"
+            return 6
         tu.getpuid(tu.pid)
         # choose DBus bus between Session and System
         # if process with pid doesn't exist (and so doesn't uid) means that
@@ -335,16 +342,15 @@ def main():
                 raise
         # "set setting" command processing
         for setting in options.settings:
-            if setting != 'profile':
-                ans = service.get_dbus_method('settingset', busObject)
-                try:
-                    print ans(setting, options.settings[setting])
-                except dbus.exceptions.DBusException as err:
-                    if err.get_dbus_name() == \
-                        'org.freedesktop.DBus.Error.AccessDenied':
-                        print(
-                            "warning: you are not allowed to set "
-                            "settings inside the service")
+            ans = service.get_dbus_method('settingset', busObject)
+            try:
+                print ans(setting, options.settings[setting])
+            except dbus.exceptions.DBusException as err:
+                if err.get_dbus_name() == \
+                    'org.freedesktop.DBus.Error.AccessDenied':
+                    print(
+                        "warning: you are not allowed to set "
+                        "settings inside the service")
         # "service execution" command processing
         for command in ap.queryArgs.keys() + ap.execArgs.keys():
             ans = service.get_dbus_method(command, busObject)
