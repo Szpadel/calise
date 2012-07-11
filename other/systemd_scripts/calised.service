@@ -1,0 +1,11 @@
+[Unit]
+Description=execute calise as systemd service
+
+[Service]
+Type=dbus
+ExecStart=/usr/bin/calised
+ExecStop=/usr/bin/calised --stop
+BusName=org.calise.service
+
+[Install]
+WantedBy=multi-user.target

@@ -99,6 +99,20 @@ def clearScriptExtensions(path=None):
             retList.append(os.path.join('bin', script.replace('.py', '')))
 
 
+# restore '.py' suffix to scripts in 'bin' directory
+def restoreScriptExtensions(path=None):
+    if path is None:
+        path = getsd()
+        binPath = os.path.join(path, 'bin')
+    if os.path.isdir(binPath):
+        retList = []
+        for script in os.listdir(binPath):
+            os.rename(
+                os.path.join(binPath, script),
+                os.path.join(binPath, script + '.py'))
+            retList.append(os.path.join('bin', script + '.py'))
+
+
 clearScriptExtensions()
 # instruct setup to build c modules with their included libraries
 addModule1 = Extension(
@@ -114,8 +128,8 @@ setup(name='calise',
       description="automatically adjust backlight trough a camera",
       author='Nicolò Barbon',
       author_email='smilzoboboz@gmail.com',
-      url='http://sourceforge.net/projects/calise/',
+      url='http://calise.sourceforge.net/',
       license='GNU GPL v3',
-      #scripts=clearScriptExtensions(),
       ext_modules=[addModule1, addModule2],
      )
+restoreScriptExtensions()

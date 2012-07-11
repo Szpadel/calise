@@ -131,8 +131,8 @@ def checkServiceCommands(arglist):
     exitCode = None
     for cmd in options.serviceCommands:
         if arglist.count('check'):
-            print "[INFO] Service is not alive"
-            exitCode = 0
+            print "Service is not alive"
+            exitCode = 1
             break
         elif arglist.count(cmd):
             hp = options.serviceGetArgs([])
