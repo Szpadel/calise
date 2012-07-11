@@ -3,16 +3,13 @@
 . /etc/rc.conf
 . /etc/rc.d/functions
 
-get_pid_ps() {
-    ps -C $1 -o pid --no-headers || return 1
-}
-
 DAEMON=calised
 ARGS=
 
 [ -r /etc/conf.d/$DAEMON ] && . /etc/conf.d/$DAEMON
 
-PID=$(get_pid_ps $DAEMON)
+# stupid pidof's python behaviour... almost only way to get pid from name
+PID="$(ps -C $DAEMON -o pid,cmd | grep "python" | awk '{print $1}')"
 
 case "$1" in
     start)
