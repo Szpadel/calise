@@ -13,14 +13,32 @@ PID="$(ps -C $DAEMON -o pid,cmd | grep "python" | awk '{print $1}')"
 
 case "$1" in
     start)
-        stat_busy "Starting $DAEMON"
+        stat_busy "Starting calise service"
         if [ ! -z "$PID" ]
         then
             stat_fail
             exit 1
         fi
         $DAEMON $ARGS &>/dev/null &
-        if [ ! -z "$(ps -C $DAEMON -o pid,cmd | grep "python" | awk '{print $1}')" ]
+        # need to wait until process exists
+        while [ -z "$(ps -C $DAEMON -o pid,cmd | grep "python")" ]
+        do
+            sleep 0.1
+        done
+        PID="$(ps -C $DAEMON -o pid,cmd | grep "python" | awk '{print $1}')"
+        # need to wait until service writes temdir, fail if pid does not
+        # exist anymore
+        while [ ! -f /tmp/calise-*/calise-*.pid ]
+        do
+            if [ -z "$(ps -p $PID --no-headers)" ]
+            then
+                stat_fail
+                exit 1
+            fi
+            sleep 0.1
+        done
+        $DAEMON --check &>/dev/null
+        if [ $? -eq 0 ]
         then
             add_daemon $DAEMON
             stat_done
@@ -30,7 +48,7 @@ case "$1" in
         fi
         ;;
     stop)
-        stat_busy "Stopping $DAEMON"
+        stat_busy "Stopping calise service"
         [ -n "$PID" ] && $DAEMON -k &>/dev/null
         if [ $? -eq 0 ]
         then
