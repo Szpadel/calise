@@ -154,13 +154,17 @@ class imaging():
             try:
                 val = self.cameraObj.readFrame()
             except camera.Error as err:
-                if time.time() - expiryTimer > 30:
+                if time.time() - expiryTimer > 60:
+                    logger.error(
+                        "Unable to get a frame from the camera: "
+                        "device is continuously returning "
+                        "V4L2.EAGAIN (Try Again)")
                     logger.critical(
-                        "Unable to access camera device; 30 seconds anti-lock"
+                        "60 seconds anti-lock"
                         "timer expired, closing.")
                     self.stopCapture()
                     self.freeCameraObj()
-                    raise
+                    os.kill(os.getpid(), 9)  # TODO: Fix that issue
                 elif errno.EAGAIN == err[0]:
                     time.sleep(1.0 / 30.0)  # 1/30 is arbitrary
                 else:
@@ -320,13 +324,14 @@ class imaging():
             if self.authorizer.seat:
                 self.authorizer.getActiveSession()
             if self.authorizer.session:
-                display = self.authorizer.getActiveDisplay()
+                self.authorizer.getActiveDisplay()
             if self.authorizer.display:
                 activeUser = self.authorizer.getActiveUser()
                 xauthority = getXauthority(activeUser)
                 if xauthority != os.getenv('XAUTHORITY'):
                     os.environ['XAUTHORITY'] = xauthority
                     logger.debug("X11 authority set to %s" % xauthority)
+                    display = self.authorizer.display
         if display:
             scr = screenBrightness.getDisplayBrightness(display)
             if scr:
@@ -355,6 +360,7 @@ class secessionist():
         self.busPath = '/org/freedesktop/ConsoleKit'
         self.seat = None
         self.session = None
+        self.display = None
         self.xauthority = None
 
     def getActiveSeat(self):

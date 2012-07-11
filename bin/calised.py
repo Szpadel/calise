@@ -286,12 +286,12 @@ def main():
     rc = checkExecArguments(ap.execArgs)
     if type(rc) == tuple:
         print(
-            "[CRITICAL] Commands %s cannot be executed together."
+            "critical: Commands %s cannot be executed together."
             % " and ".join([", ".join(rc[1][1:]), rc[1][0]]))
         return 5
     elif rc != 0:
         print(
-            "[CRITICAL] This error should never happen, you're *lucky*!")
+            "critical: This error should never happen, you're *lucky*!")
         return 30
     # "normal" behaviour
     tu = tempUtils()
@@ -343,7 +343,7 @@ def main():
                     if err.get_dbus_name() == \
                         'org.freedesktop.DBus.Error.AccessDenied':
                         print(
-                            "[WARNING] You are not allowed to set "
+                            "warning: you are not allowed to set "
                             "settings inside the service")
         # "service execution" command processing
         for command in ap.queryArgs.keys() + ap.execArgs.keys():
@@ -354,12 +354,12 @@ def main():
                 if err.get_dbus_name() == \
                     'org.freedesktop.DBus.Error.AccessDenied':
                     print(
-                        "[WARNING] You are not allowed to send "
+                        "warning: you are not allowed to send "
                         "command \"%s\" to the service" % command)
                 elif err.get_dbus_name() == \
                     'org.freedesktop.DBus.Python.IndexError':
                     print(
-                        "[WARNING] There is no data to dump, retry later")
+                        "warning: there is no data to dump, retry later")
     # service start
     # if there's no service active, cli arguments are managed as start
     # options
