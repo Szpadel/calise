@@ -148,7 +148,7 @@ class MainWid(QtGui.QWidget):
             self, 'Open file',os.getenv('HOME'))
         if filename == QtCore.QString(''):
             return
-        self.com.td.ExpPath = filename
+        self.com.td.ExpPath = str(filename)
         self.com.td.sig = 'export'
 
     def changeValue(self):
