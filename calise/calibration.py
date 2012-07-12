@@ -722,8 +722,6 @@ class CliCalibration():
             config = ConfigParser.RawConfigParser()
             config.read(camConf)
             self.offset = config.getfloat('Camera', 'offset')
-        elif hasControlCapability(self.camera) == 0:
-            self.offset = 0.0
         else:
             raw_input(customWrap(_(
                 "Cover the webcam and then press ENTER or RETURN")))
