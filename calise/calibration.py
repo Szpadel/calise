@@ -267,10 +267,11 @@ class calCapture (threading.Thread):
         '''
         self.cap.initializeCamera(path=self.path)
         self.cap.startCapture()
-        startTime = time.time()
         defInt = 2/30.0
+        startTime = time.time()
         self.data = self.cap.getFrameBri(interval=defInt, loop=True, keep=True)
-        del self.data[:-(int(10 / defInt))]
+        fps = sum(self.data) / (time.time() - startTime)
+        del self.data[:-(int(10 * fps))]
         self.data = processList(self.data)
         self.average = sum(self.data) / len(self.data)
         self.dev = sDev(self.data, average=self.average)
