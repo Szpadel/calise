@@ -154,16 +154,16 @@ class imaging():
             try:
                 val = self.cameraObj.readFrame()
             except camera.Error as err:
-                if time.time() - expiryTimer > 60:
+                if time.time() - expiryTimer > 30:
+                    self.stopCapture()
+                    self.freeCameraObj()
                     logger.error(
                         "Unable to get a frame from the camera: "
                         "device is continuously returning "
                         "V4L2.EAGAIN (Try Again)")
                     logger.critical(
-                        "60 seconds anti-lock"
+                        "30 seconds anti-lock"
                         "timer expired, closing.")
-                    self.stopCapture()
-                    self.freeCameraObj()
                     os.kill(os.getpid(), 9)  # TODO: Fix that issue
                 elif errno.EAGAIN == err[0]:
                     time.sleep(1.0 / 30.0)  # 1/30 is arbitrary
