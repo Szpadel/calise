@@ -596,8 +596,9 @@ class CliCalibration():
             lat = geo['lat']
             lon = geo['lon']
         dummy = query_yes_no(customWrap(_(
-            "The program has found these coordinates (%s, %s) through geoip "
-            "lookup, would you like to use these value?") % (lat, lon)), "yes")
+            "The program has found these coordinates (\"%s\": %s, %s) through "
+            "geoip lookup, would you like to use these value?")
+            % (geo['city'], lat, lon)), "yes")
         print("")
         if dummy == "yes":
             self.lat = lat
