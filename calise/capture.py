@@ -21,7 +21,9 @@ def processList(valList):
     - list returned after sdevListProcessor is the same as input one
 
     '''
-    cv = valList
+    cv = ponderatedProcessList(valList)
+    if len(cv) == 0:
+        cv = valList
     while len(cv) > 2:
         nv = sdevListProcessor(cv)
         if len(cv) == len(nv):
@@ -54,6 +56,30 @@ def sdevListProcessor(lista):
         if not dev > 3 or not (lista[idx] > maximum or lista[idx] < minimum):
             retList.append(lista[idx])
     return retList
+
+
+def ponderatedProcessList(lista):
+    ''' remove white balance
+
+    when disabling/re-enabling white balance, frames progrssively change from
+    low brightness (balanced) to high and vice-versa.
+    This function keeps only constant (sdev < 2) values at the end of capture
+    list. Otherwise returns empty list.
+
+    '''
+    cont = []
+    for i in range(len(lista)):
+        if i != 0:
+            ddev = abs(sDev(lista[-(i + 1):]) - sDev(lista[-(i):]))
+        if i == 0:
+            cont.append(lista[-(i+1)])
+        elif ddev < 2:
+            cont.append(lista[-(i+1)])
+        elif ddev >= 2:
+            if not len(cont) > 3:
+                cont = []
+            break
+    return cont
 
 
 # siple standard deviation function (used by sdevListProcessor)
