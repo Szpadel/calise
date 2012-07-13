@@ -32,6 +32,8 @@ import os.path
 from xdg.BaseDirectory import save_config_path
 import tempfile
 
+from subprocess import Popen, PIPE
+
 from calise.infos import __LowerName__, __version__, __CapitalName__
 
 
@@ -99,17 +101,40 @@ if __name__ == '__main__':
             % (__CapitalName__,__version__)
         )
 
-    # NOTE: temporary fix until proper implementation
-    # Checks for a running service instance and if so, stops it (at the end of
-    # execution service will be started again, take a look at the end
-    pid = obtainWorkdir()
-    if pid:
-        sys.stderr.write(
-            "Service version of the program should be still running.\n"
-            "If you think this is an error, please delete \"%s\" and run "
-            "again.\n" % pid)
-        sys.stderr.flush()
-        sys.exit(2)
+    ''' temporary fix until proper implementation
+    Checks for a running service instance and if so, stops it (at the end of
+    execution service will be started again, take a look at the end of this
+    page
+
+    NOTE: This implementation is extremely experimental and temporary, real
+          implementation needs return codes from dbus objects (can be done
+          with tuple)
+    '''
+    service_wasAlive = False
+    pcs = Popen(['calised', '--check'], stdout=PIPE, stderr=PIPE)
+    dmp = pcs.communicate()
+    # service alive and running
+    if ''.join(dmp[0].split('\n')) == "service is alive and running":
+        pcs = Popen(['calised', '--pause'], stdout=PIPE, stderr=PIPE)
+        dmp = pcs.communicate()
+        if ''.join(dmp[0].split('\n')).startswith("warning: "):
+            print(
+                "Unable to pause a running calised execution, calise won't"
+                "start because it's higly probable that the two programs"
+                "will overlap")
+            sys.exit(7)
+        else:
+            service_wasAlive = True
+    # service alive and paused
+    elif ''.join(dmp[0].split('\n')) == "service is alive but paused":
+        pass
+    # service is not alive
+    elif ''.join(dmp[0].split('\n')) == "service is not alive":
+        pass
+    # warning: unable to check service execution
+    elif ''.join(dmp[0].split('\n')).startswith("warning: "):
+        pass
+
 
     defName = 'default'
     defConf = '%s.conf' % os.path.join(
@@ -250,10 +275,9 @@ if __name__ == '__main__':
         while trd.isAlive(): sleep(0.5)
 
 
-    # NOTE:
-    # Right now the program isn't aware of the options given to the service,
-    # so it will start a "default" instance, that means it will read from
-    # "default" profile
-    #if service_wasAlive:
-    #    p = Popen(["calised","--resume"],stdout=PIPE,stderr=PIPE)
-    #    ret = p.communicate()
+    # NOTE: Right now the program isn't aware of the options given to the
+    #       service, so it will start a "default" instance, that means it will
+    #       read from "default" profile
+    if service_wasAlive:
+        p = Popen(['calised', '--resume'], stdout=PIPE, stderr=PIPE)
+        ret = p.communicate()
