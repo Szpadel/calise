@@ -100,6 +100,7 @@ class imaging():
         self.logger = logging.getLogger(".".join([__LowerName__, 'capture']))
         self.deviceStatus = None
         self.authorizer = None
+        self.counter = 0
 
     # defines the camera to be used, path has to be a valid device path like
     # '/dev/video', if no path is given, first cam of camera.camPaths is taken
@@ -201,6 +202,7 @@ class imaging():
             retList = None
             addList = None
         x = 0
+        self.counter = 0
         while x < captures + 1:
             startTime = time.time()
             val = self.getFrameBriSimple()
@@ -209,8 +211,10 @@ class imaging():
                 if retList is not None:
                     if len(retList) < captures:
                         retList.append(int(val))
+                        self.counter += 1
                     elif len(retList) == captures:
                         addList.append(int(val))
+                        self.counter += 1
                 # if not last step in schedule sleep
                 if x < captures:
                     sleeptime = interval - time.time() + startTime
