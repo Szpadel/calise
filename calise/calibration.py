@@ -230,6 +230,10 @@ class calCapture (threading.Thread):
     def okToStop(self):
         self.cap.stop = True
 
+    # return the number of captures done by the capture function
+    def getValCounter(self):
+        return self.cap.counter
+
     def adjust_scale(self, cur=0):
         den = 100.00 / self.steps
         # set_flt needs a step value on the scale 0 < 9, so, if there's a
@@ -733,7 +737,7 @@ class CliCalibration():
                 self.camera, self.bfile, self.steps, self.bkofs, self.invert)
             startTime = time.time()
             valThread.start()
-            while time.time() - startTime < 4:
+            while valThread.getValCounter() < 40:
                 time.sleep(.1)
             valThread.okToStop()
             valThread.join(10)
@@ -752,7 +756,7 @@ class CliCalibration():
         startTime = time.time()
         valThread.start()
         cap = imaging()
-        while time.time() - startTime < 4:
+        while valThread.getValCounter() < 40:
             time.sleep(.1)
         fprnt(_("Capture thread started."))
         time.sleep(0.75)
