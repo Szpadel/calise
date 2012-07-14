@@ -21,7 +21,9 @@ def processList(valList):
     - list returned after sdevListProcessor is the same as input one
 
     '''
-    cv = valList
+    cv = ponderatedProcessList(valList)
+    if len(cv) == 0:
+        cv = valList
     while len(cv) > 2:
         nv = sdevListProcessor(cv)
         if len(cv) == len(nv):
@@ -54,6 +56,30 @@ def sdevListProcessor(lista):
         if not dev > 3 or not (lista[idx] > maximum or lista[idx] < minimum):
             retList.append(lista[idx])
     return retList
+
+
+def ponderatedProcessList(lista):
+    ''' remove white balance
+
+    when disabling/re-enabling white balance, frames progrssively change from
+    low brightness (balanced) to high and vice-versa.
+    This function keeps only constant (sdev < 2) values at the end of capture
+    list. Otherwise returns empty list.
+
+    '''
+    cont = []
+    for i in range(len(lista)):
+        if i != 0:
+            ddev = abs(sDev(lista[-(i + 1):]) - sDev(lista[-(i):]))
+        if i == 0:
+            cont.append(lista[-(i+1)])
+        elif ddev < 2:
+            cont.append(lista[-(i+1)])
+        elif ddev >= 2:
+            if not len(cont) > 3:
+                cont = []
+            break
+    return cont
 
 
 # siple standard deviation function (used by sdevListProcessor)
@@ -100,6 +126,7 @@ class imaging():
         self.logger = logging.getLogger(".".join([__LowerName__, 'capture']))
         self.deviceStatus = None
         self.authorizer = None
+        self.counter = 0
 
     # defines the camera to be used, path has to be a valid device path like
     # '/dev/video', if no path is given, first cam of camera.camPaths is taken
@@ -201,6 +228,7 @@ class imaging():
             retList = None
             addList = None
         x = 0
+        self.counter = 0
         while x < captures + 1:
             startTime = time.time()
             val = self.getFrameBriSimple()
@@ -209,8 +237,10 @@ class imaging():
                 if retList is not None:
                     if len(retList) < captures:
                         retList.append(int(val))
+                        self.counter += 1
                     elif len(retList) == captures:
                         addList.append(int(val))
+                        self.counter += 1
                 # if not last step in schedule sleep
                 if x < captures:
                     sleeptime = interval - time.time() + startTime
