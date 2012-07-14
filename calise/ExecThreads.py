@@ -185,14 +185,13 @@ class mainLoop():
 
         if not self.args.gui:
             if self.args.verbose:
-                sys.stdout.write('%3s:%3d %3s:%3d %3s:%3s ' % (
-                    "AMB",round(
-                        self.step1.data['ambient'][-1] -\
-                        self.step1.data['correction'][-1], 0),
-                    "SCR", round(
-                        self.step1.data['screen'][-1], 0),
-                    "COR", str(round(
-                        self.step1.data['correction'][-1],1)),))
+                sys.stdout.write(
+                    '%3s:%3d %3s:%3d %3s:%3s ' % (
+                        "AMB",round(self.step1.data['ambient'][-1], 0),
+                        "SCR", round(self.step1.data['screen'][-1], 0),
+                        "COR", str(round(self.step1.data['correction'][-1], 1))
+                    )
+                )
             sys.stdout.write(
                 '%3s:%3d%1s | %3s:%2d %3s:%5.2f%1s %1s:%3d %s %s \r'
                 % (
