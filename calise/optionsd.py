@@ -33,7 +33,7 @@ logger = logging.getLogger('.'.join([__LowerName__, 'options']))
 
 # Default settings
 defaultSettings = {
-    'capnum': 10,
+    'capnum': 14,
     'capint': 0.1,
     'loglevel': 'info',
     'logfile': None,
