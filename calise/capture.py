@@ -79,6 +79,7 @@ def ponderatedProcessList(lista):
             if not len(cont) > 3:
                 cont = []
             break
+    cont.reverse()
     return cont
 
 

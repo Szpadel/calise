@@ -139,6 +139,8 @@ class objects():
             self.arguments['offset'], self.arguments['delta'],
             self.newcomers['scr'],
             self.adjustScale(self.newcomers['cbs']))
+        self.logger.debug(
+            "Correction amount (in /255): %4.1f" % caliseCompute.cor)
         self.newcomers['pct'] = caliseCompute.pct
         return self.newcomers['pct']
 
