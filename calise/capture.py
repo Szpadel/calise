@@ -208,7 +208,6 @@ class imaging():
             except camera.Error as err:
                 if time.time() - expiryTimer > 30:
                     self.stopCapture()
-                    self.freeCameraObj()
                     logger.error(
                         "Unable to get a frame from the camera: "
                         "device is continuously returning "
