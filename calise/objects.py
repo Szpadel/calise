@@ -1,4 +1,4 @@
-#    Copyright (C)   2011   Nicolo' Barbon
+#    Copyright (C)   2011-2012   Nicolo' Barbon
 #
 #    This file is part of Calise.
 #
@@ -72,7 +72,8 @@ class objects():
         if (
             info_list.count('css') or
             info_list.count('nss') or
-            info_list.count('slp')):
+            info_list.count('slp')
+        ):
             self.executer(False)
             if info_list.count('css'):
                 info_dict['css'] = self.newcomers['css']
@@ -103,18 +104,49 @@ class objects():
         self.newcomers['cts'] = time.time()
         return self.newcomers['cts']
 
-    # simple function to obtain ambient brightness (new or existing value)
     def getAmb(self):
+        ''' simple function to obtain ambient brightness
+
+        NOTE: Capture module *can* raise "KeyboardInterrupt" if camera module
+              returns EAGAIN for more than 30 seconds, in that case this
+              function lets three tries to obtain a value for ambient
+              brightness.
+              After the 3rd try failed SIGTERM is send to main process and so
+              program is gracefully closed (with critical errors log).
+        '''
         if not self.newcomers['cts']:
             self.getCts()
-        self.capture.startCapture()
-        camValues = self.capture.getFrameBri(
-            self.arguments['capint'], self.arguments['capnum'])
-        self.capture.stopCapture()
-        camValues = processList(camValues)
-        self.logger.debug(
-            "Processed values: %s" % ', '.join(["%d" % x for x in camValues]))
-        self.newcomers['amb'] = sum(camValues) / float(len(camValues))
+        for x in range(3):
+            try:
+                self.capture.startCapture()
+            except KeyboardInterrupt:
+                import os
+                import sys
+                self.logger.critical(
+                    "Camera object is busy, sending "
+                    "SIGTERM to main process...")
+                os.kill(os.getpid(), 15)
+                sys.exit(1)
+            try:
+                camValues = self.capture.getFrameBri(
+                    self.arguments['capint'], self.arguments['capnum'])
+            except KeyboardInterrupt:
+                if x < 2:
+                    continue
+                else:
+                    import os
+                    self.logger.critical(
+                        "Third camera capture try failed in a row, sending "
+                        "SIGTERM to main process...")
+                    os.kill(os.getpid(), 15)
+                    sys.exit(1)
+            self.capture.stopCapture()
+            camValues = processList(camValues)
+            self.logger.debug(
+                "Processed values: %s"
+                % ', '.join(["%d" % x for x in camValues]))
+            self.newcomers['amb'] = sum(camValues) / float(len(camValues))
+            break
         return self.newcomers['amb']
 
     # simple function to obtain screen brightness (new or existing value)
@@ -172,19 +204,15 @@ class objects():
     def adjustScale(self, cur):
         steps = self.arguments['steps']
         bkofs = self.arguments['bkofs']
-        den = 100.00 / steps
-        if self.arguments['invert']:
-            return (steps - 1 - (cur - bkofs)) * (den / 10.0)
-        else:
-            return (cur - bkofs) * (den / 10.0)
+        return (cur - bkofs + 1) * (1.00 / steps)
 
-    """ Backlight-step change writer
-    Checks for read permission and if so writes current backlight step on sys
-    brightness file (the one selected throug computation)
-    If increasing is set either to False or True and if previous backlight
-    step was lower/higher, writeStep will return False (no change)
-    """
     def writeStep(self, increasing=None, standalone=False):
+        ''' Backlight-step change writer
+
+        Checks for read permission and if so writes current backlight step on
+        sys brightness file (the one selected throug computation)
+
+        '''
         if standalone:
             self.getCts()
         self.getSbs()
@@ -192,11 +220,7 @@ class objects():
         if self.arguments['invert']:
             increasing = not increasing
         refer = int(self.newcomers['sbs']) - int(self.newcomers['cbs'])
-        if ((
-            #refer > 0 and increasing is True) or (    # dawn condition
-            #refer < 0 and increasing is False) or (   # sunset condition
-            #abs(refer) > 1) or (                      # room light lit/shut
-            abs(refer) > 0 and increasing is None)):  # normal statement
+        if abs(refer) > 0 and increasing is None:
             try:
                 fp = open(bfile, 'w')
             except IOError as err:
@@ -256,14 +280,14 @@ class objects():
         return 0
 
     def executer(self, execute=True, ctime=None):
-        """ service "core"
+        ''' service "core"
 
         With the help of the getSun function (which use ephem module) in
         calise.sun module, discovers current time of the day and sets sleep
         time before a new capture and increasing/decreasing writeStep args
         accordingly
 
-        """
+        '''
         if not self.newcomers['cts']:
             self.getCts()
         if ctime is None:
@@ -303,15 +327,7 @@ class objects():
         daw_tw = int(sun[2])
         sus_tw = int(sun[3])
 
-        # sleeptime between captures
-        #
-        # if ipotetically during daw_tw/sus_tw the backlight goes from max to
-        # min, then there will be a step change every %x% sec, to be more
-        # precise I decided to set sleeptime to %x% / 10
-        #
-        # EDIT: machines with more than 10000 backlight steps 'blowed-up' with
-        #       previous formula, percentage will work better there
-        #
+        # sleeptime between captures (for both dawn and sunset)
         daw_sl = daw_tw / 100.0
         sus_sl = sus_tw / 100.0
 

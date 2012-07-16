@@ -1,4 +1,4 @@
-#    Copyright (C)   2011   Nicolo' Barbon
+#    Copyright (C)   2011-2012   Nicolo' Barbon
 #
 #    This file is part of Calise.
 #
@@ -21,15 +21,19 @@ import errno
 from math import atan, pi
 from time import time
 
-'''Computation class
-In this class are set custom equations to obtain:
-- maximum lightness correction
-- effective correction
-- brightness percentage (using user-defined scale)
-There are also backlight directory's functions. All parameters are briefly
-explained below
-'''
+
 class computation():
+    ''' Computation-realted tasks
+
+    In this class are set custom equations to obtain:
+        - maximum lightness correction
+        - effective correction
+        - brightness percentage (using user-defined scale)
+
+    There are also backlight directory's functions. All parameters are briefly
+    explained below
+
+    '''
 
     def __init__(self):
         self.scr = None # screen brightness 0 < 255
@@ -44,9 +48,10 @@ class computation():
         self.bkpow = None # 0 = power-on, 1 = power-off
 
     # calculates ambient brightness correction using screen backlight value
-    def correction(self,amb=.0,scr=.0,dstep=.0):
-        cor_max = 8+(atan((dstep+1)-2.55)*(dstep+1)**.3857*8)
-        self.cor = cor_max*(.5-atan(amb/15.0-4)/pi)*(scr/255.0)**1.5
+    def correction(self,amb=0,scr=0,dstep=0):
+        max_cor_mul = (1.0 / 3) * (180 - amb) / (amb + 10)
+        backlight_mul = (scr / 255.0 ) ** 2
+        self.cor = amb * max_cor_mul * backlight_mul * dstep
 
     # calculates ambient brightness percentage using user-defined scale
     def percentage(self,amb,ofs=0.0,delta=255/(100**(1/.73)),scr=0,dstep=0):
@@ -181,13 +186,10 @@ class execution():
         self.tol = tol
         self.pos = pos
 
-    # set_flt needs a step value on the scale 0 < 9, so, if there's a
-    # different scale/offset, it has to be reduced to a 0 < 9 one.
+    # set_flt needs a step value on the scale 0 < 1, so, if there's a
+    # different scale/offset, it has to be reduced to a 0 < 1 one.
     def AdjustScale(self, cur):
-        if self.invert:
-            return (self.steps-1-(cur-self.bkofs))*(self.den/10.0)
-        else:
-            return (cur-self.bkofs)*(self.den/10.0)
+        return (cur - self.bkofs + 1) * (1.00 / self.steps)
 
     # picks brightness percentages, backlight steps and offset and invert, then
     # returns the corresponding backlight step

@@ -20,11 +20,6 @@
 #    You should have received a copy of the GNU General Public License
 #    along with Calise.  If not, see <http://www.gnu.org/licenses/>.
 #
-#    THANKS:
-#     - Pádraig Brady for his brief guide to gettext translation
-#     - Trent Mick for query_yes_no()
-#     - Danny Yoo for _Getch* classes
-#
 
 import gettext, locale
 import sys

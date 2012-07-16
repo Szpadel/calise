@@ -1,3 +1,20 @@
+#    Copyright (C)   2011-2012   Nicolo' Barbon
+#
+#    This file is part of Calise.
+#
+#    Calise is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    any later version.
+#
+#    Calise is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Calise.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import errno
 import time
@@ -152,7 +169,14 @@ class imaging():
             return
         self.cameraObj.openPath()
         self.adjustCtrls()
-        self.cameraObj.initialize()
+        try:
+            self.cameraObj.initialize()
+        except camera.Error as err:
+            if err[0] == 16:
+                logger.error(err[1].rstrip('\n'))
+                self.restoreCtrls()
+                self.cameraObj.closePath()
+                raise KeyboardInterrupt
         self.cameraObj.startCapture()
         self.deviceStatus = True
 
@@ -189,10 +213,10 @@ class imaging():
                         "Unable to get a frame from the camera: "
                         "device is continuously returning "
                         "V4L2.EAGAIN (Try Again)")
-                    logger.critical(
+                    logger.error(
                         "30 seconds anti-lock"
-                        "timer expired, closing.")
-                    os.kill(os.getpid(), 9)  # TODO: Fix that issue
+                        "timer expired, discarding capture session.")
+                    raise KeyboardInterrupt
                 elif errno.EAGAIN == err[0]:
                     time.sleep(1.0 / 30.0)  # 1/30 is arbitrary
                 else:

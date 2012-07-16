@@ -1,4 +1,4 @@
-#    Copyright (C)   2011   Nicolo' Barbon
+#    Copyright (C)   2011-2012   Nicolo' Barbon
 #
 #    This file is part of Calise.
 #
@@ -22,6 +22,7 @@ import logging
 import gobject
 import dbus
 import dbus.service
+import signal
 from dbus.mainloop.glib import DBusGMainLoop
 
 from calise import objects
@@ -157,13 +158,38 @@ class dbusService(dbus.service.Object):
         self.busObject = 'org.%s.service' % __LowerName__
         self.busPath = '/org/%s/service' % __LowerName__
         bus_name = dbus.service.BusName(self.busObject, bus=sbus())
+        self.initSignals()
         dbus.service.Object.__init__(self, bus_name, self.busPath)
 
-    # DBus methods
-    # NOTE: Every function regarding thread execution (start, stop, pause,
-    #       resume, others) *must* call the wrapper "loggerFuncWrap" and check
-    #       the return code.
-    #
+    # signal exceptions definition
+    def initSignals(self):
+        signal.signal(signal.SIGCONT, self.clear)
+        signal.signal(signal.SIGTERM, self.clear)
+        signal.signal(signal.SIGINT, self.clear)
+        signal.signal(signal.SIGTSTP, self.clear)
+
+    # manages clean exit/pause
+    def clear(self, sig=None, func=None):
+        if sig == signal.SIGTERM or sig == signal.SIGINT:
+            # TERMinate or manual INTerrupt
+            m = self.kill()
+            print m
+            sys.exit(0)
+        elif sig == signal.SIGTSTP:
+            # pause process
+            m = self.pause()
+            print m
+        elif sig == signal.SIGCONT:
+            # resume process
+            m = self.resume()
+            print m
+
+    ''' DBus methods listing
+
+     NOTE: Every function regarding thread execution (start, stop, pause,
+           resume, others) *must* call the wrapper "loggerFuncWrap" and check
+           the return code.
+    '''
     @dbus.service.method('org.%s.service' % __LowerName__)
     def kill(self):
         self.logger.debug("Client requested kill. Stopping thread...")
@@ -545,4 +571,7 @@ class service():
         serviceBus = dbusService(self.serviceHandler, self.loop, self.isroot)
 
     def runLoop(self):
-        self.loop.run()
+        try:
+            self.loop.run()
+        except KeyboardInterrupt:
+            pass

@@ -1,11 +1,11 @@
-""" getTerminalSize()
+''' getTerminalSize()
 
  - get width and height of console
  - works on linux,os x,windows,cygwin(windows)
 
  NOTE: Found these good functions in internet, don't know who to thank for but
        for sure they saved some of my time.
-"""
+'''
 
 __all__=['getTerminalSize']
 

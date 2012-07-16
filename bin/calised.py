@@ -5,7 +5,7 @@
 #             calculates ambient brightness and suggests (or sets)
 #             screen's correct backlight level using a camera.
 #
-#    Copyright (C)   2011   Nicolo' Barbon
+#    Copyright (C)   2011-2012   Nicolo' Barbon
 #
 #    Calise is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by

@@ -235,13 +235,9 @@ class calCapture (threading.Thread):
         return self.cap.counter
 
     def adjust_scale(self, cur=0):
-        # set_flt needs a step value on the scale 0 < 9, so, if there's a
-        # different scale/offset, it has to be reduced to a 0 < 9 one.
-        #if self.invert:
-        #    return (self.steps - 1 - (cur - self.bkofs)) * (den / 10.0)
-        #else:
-        #    return (cur - self.bkofs) * (den / 10.0)
-        return (cur - self.bkofs) * (100.00 / self.steps)
+        # set_flt needs a step value on the scale 0 < 100, so, if there's a
+        # different scale/offset, it has to be set to a 0 < 100 one.
+        return (cur - self.bkofs + 1) * (100.00 / self.steps)
 
     # Takes a 255based screen brightness value and corrects all data indexes
     # from last correction (from 0 if the first one). Actually replaces a
@@ -254,7 +250,7 @@ class calCapture (threading.Thread):
             if scr > 0:
                 dstep = self.adjust_scale(
                     self.com.get_values('step', self.bfile))
-                self.com.newcorrection(self.data[idx], scr, dstep)
+                self.com.correction(self.data[idx], scr, dstep)
                 self.data[idx] -= self.com.cor
         self.partial = idxTot
 
