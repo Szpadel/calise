@@ -30,39 +30,39 @@ from calise.infos import __LowerName__
 logger = logging.getLogger(".".join([__LowerName__, 'capture']))
 
 
-def processList(valList):
-    ''' Complete standard deviation list check
+def processList(lista):
+    ''' processs() wrapper if launched outside capture process
 
-    Process a list until:
-    - only 2 elements remain... (really bad measure, should be reported)
-    - list returned after sdevListProcessor is the same as input one
-
+    NOTE: If the list returned by processs() is empty, returns input list
+          untouched
     '''
-    cv = ponderatedProcessList(valList)
-    if len(cv) == 0:
-        cv = valList
-    while len(cv) > 2:
-        nv = sdevListProcessor(cv)
-        if len(cv) == len(nv):
-            break
-        else:
-            cv = nv
-    return cv
+    retVal = processs(lista)
+    if len(retVal) == 3:
+        retVal = lista
+    return retVal
+
+
+def processs(lista):
+    ''' List process method selector
+
+    Choose what function has to be used to process input list upon list length.
+
+    NOTE: Can return empty list, to avoid that (and return full input list in
+          that case), take a look at processList()
+    '''
+    retVal = sdevListProcessor(lista)
+    # 2/3 is arbitrary
+    if len(retVal) < (2 / 3.0) * len(lista):
+        retVal = ponderatedProcessList2(lista)
+    return retVal
 
 
 def sdevListProcessor(lista):
     ''' Standard deviation list check
 
-    If some values are too different from the others, they get removed from
-    output list
+    Perform a per-element standard deviation check, elements above or below
+    standard deviation's threshold are removed.
 
-    NOTE: Best use of this function is executed from processList, since *every*
-          discordant value gets removed in the end.
-
-          eg: in a list X, Y, K, J are discordant from other values but X and Y
-              are way more discordant than the other two.
-              After a run of this function only X and Y are removed and only
-              re-computing standard devaition leads to the removal of K and J.
     '''
     avg = sum(lista) / float(len(lista))
     dev = sDev(lista, avg)
@@ -76,31 +76,31 @@ def sdevListProcessor(lista):
 
 
 def ponderatedProcessList(lista):
-    ''' remove white balance
+    ''' Grouped standard deviation list check
 
-    when disabling/re-enabling white balance, frames progrssively change from
-    low brightness (balanced) to high and vice-versa.
-    This function keeps only constant (sdev < 2) values at the end of capture
-    list. Otherwise returns empty list.
+    When disabling/re-enabling white balance, frames progrssively change from
+    low brightness (balanced) to high and vice-versa. The same can happen after
+    suspend/hibernate on resume and on first capture after shutdown.
+
+    This function keeps only constant values (sdev < 3 on packs of 4) at the
+    end of capture list. Otherwise returns empty list.
 
     '''
-    cont = []
-    for i in range(len(lista)):
-        if i != 0:
-            ddev = abs(sDev(lista[-(i + 1):]) - sDev(lista[-(i):]))
-        if i == 0:
-            cont.append(lista[-(i+1)])
-        elif ddev < 2:
-            cont.append(lista[-(i+1)])
-        elif ddev >= 2:
-            if not len(cont) > 3:
-                cont = []
-            break
-    cont.reverse()
-    return cont
+    k = None
+    for x in range(len(lista) - 3):
+        dn = sDev(lista[x:x + 4])
+        if k is None and dn <= 3:
+            k = x
+        if dn > 3:
+            k = None
+    if k is not None:
+        retVal = lista[k:]
+    else:
+        retVal = []
+    return retVal
 
 
-# siple standard deviation function (used by sdevListProcessor)
+# siple standard deviation function
 def sDev(lista, average=None):
     if not average:
         average = sum(lista) / float(len(lista))
@@ -170,6 +170,8 @@ class imaging():
         self.cameraObj.openPath()
         self.adjustCtrls()
         try:
+            # TODO: malloc() errors *can* happen there if camera is being used
+            #       by other processes
             self.cameraObj.initialize()
         except camera.Error as err:
             if err[0] == 16:
@@ -277,7 +279,7 @@ class imaging():
                             "Raw values: %s" %
                             (', '.join(["%d" % k for k in retList])))
                     # if capture precision is too low, keep capturing
-                    if len(processList(retList + addList)) < 3:
+                    if len(processs(retList + addList)) == 0:
                         # log that the program it's going to do additional
                         # captures only one time
                         if len(addList) == 0:
