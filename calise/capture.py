@@ -385,6 +385,7 @@ class imaging():
                 if xauthority != os.getenv('XAUTHORITY'):
                     os.environ['XAUTHORITY'] = xauthority
                     logger.debug("X11 authority set to %s" % xauthority)
+                if os.getenv('XAUTHORITY'):
                     display = self.authorizer.display
         if display:
             scr = screenBrightness.getDisplayBrightness(display)
@@ -414,6 +415,7 @@ class secessionist():
         self.busPath = '/org/freedesktop/ConsoleKit'
         self.seat = None
         self.session = None
+        self.userid = None
         self.display = None
         self.xauthority = None
 
@@ -457,7 +459,7 @@ class secessionist():
         return self.display
 
     def getActiveUser(self):
-        self.display = None
+        self.userid = None
         cliArg = [
             'dbus-send', '--system', '--print-reply', '--type=method_call',
             '--dest=%s' % self.busObject, self.session,
@@ -466,8 +468,8 @@ class secessionist():
         r = p.communicate()
         for line in r[0].splitlines():
             if line.count('uint32'):
-                self.display = line.split()[1]
-        return self.display
+                self.userid = line.split()[1]
+        return self.userid
 
 
 def getUsernameFromUid(uid):
