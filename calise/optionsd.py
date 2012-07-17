@@ -41,7 +41,7 @@ defaultSettings = {
     'geoip': True,
     'weather': True,
     'dayst': 300.0,
-    'dusksm': 0.8,
+    'dusksm': 0.7,
     'nightst': 0.0,
 }
 
@@ -53,6 +53,7 @@ def checkSettingsArguments():
             settings[key] = defaultSettings[key]
 
 
+# simple wrapper for default settings
 def getDefaultSettings():
     return defaultSettings
 
@@ -78,6 +79,14 @@ def get_path(pname='default', sufx='.conf'):
 
 
 class wlogger():
+    ''' Logger initializer
+
+    This class initializes the logger for all other program's functions so
+    *must* be called before requesting any customized logger.
+
+    NOTE: Its modularity lets every log parameter be easily changed even if
+          already started.
+    '''
 
     def __init__(self, loglevel='info', logfile=None):
         numLvl = self.getILvl(loglevel)

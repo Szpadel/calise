@@ -59,46 +59,6 @@ class objects():
             "slp": None,  # thread sleeptime
             }
 
-    # Takes a list with a certain amount of %newcomers% keys and optimize
-    # resource usage when grabbing every information.
-    # Returns a dictionary (with %newcomers% keys)
-    def grab_infos(self, info_list):
-        if type(info_list) is not list:
-            info_list = [info_list]
-        info_dict = {}
-        if info_list.count('cts'):
-            self.getCts()
-            info_dict['cts'] = self.newcomers['cts']
-        if (
-            info_list.count('css') or
-            info_list.count('nss') or
-            info_list.count('slp')
-        ):
-            self.executer(False)
-            if info_list.count('css'):
-                info_dict['css'] = self.newcomers['css']
-            if info_list.count('nss'):
-                info_dict['nss'] = self.newcomers['nss']
-            if info_list.count('nss'):
-                info_dict['slp'] = self.newcomers['slp']
-        if info_list.count('sbs'):
-            self.getSbs()
-            for info in info_list:
-                info_dict[info] = self.newcomers[info]
-        elif info_list.count('pct'):
-            self.getPct()
-            for info in info_list:
-                info_dict[info] = self.newcomers[info]
-        else:
-            for info in info_list:
-                if info == 'cbs':
-                    info_dict[info] = self.getCbs()
-                if info == 'scr':
-                    info_dict[info] = self.getScr()
-                if info == 'amb':
-                    info_dict[info] = self.getAmb()
-        return info_dict
-
     # obtain timestamp
     def getCts(self):
         self.newcomers['cts'] = time.time()
@@ -117,16 +77,20 @@ class objects():
         if not self.newcomers['cts']:
             self.getCts()
         for x in range(3):
-            try:
-                self.capture.startCapture()
-            except KeyboardInterrupt:
-                import os
-                import sys
-                self.logger.critical(
-                    "Camera object is busy, sending "
-                    "SIGTERM to main process...")
-                os.kill(os.getpid(), 15)
-                sys.exit(1)
+            # while camera is being used by other processes, sleep 5 seconds.
+            # The first time this happens log a error.
+            i = 0
+            while True:
+                try:
+                    self.capture.startCapture()
+                    break
+                except KeyboardInterrupt:
+                    if i == 0:
+                        i += 1
+                        self.logger.error(
+                            "Camera object is busy, sending "
+                            "SIGTERM to main process...")
+                    time.sleep(5)
             try:
                 camValues = self.capture.getFrameBri(
                     self.arguments['capint'], self.arguments['capnum'])

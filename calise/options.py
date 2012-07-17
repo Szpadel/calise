@@ -187,9 +187,8 @@ def argsparser(argslist=None, version=None):
 
 
 # Configuration files parser
-# Reads throug xdg-dirs config paths and searches for the profile specified in
-# profile switch. Raises an error if the profile doesn't exists.
-#TODO: ERASE & BURN the UGLYNESS!! (remove "pas" system ASAP)
+# NOTE: Everything is done in optionsd, this is actually pretty useless
+# TODO: ERASE & BURN the UGLYNESS!! (remove "pas" system ASAP)
 def ParseCfgFile(pas=None):
     global arguments
     if pas is None:

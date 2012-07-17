@@ -29,6 +29,13 @@ logger = logging.getLogger(".".join([__LowerName__, 'ephem']))
 
 
 def getDst(curTime=None):
+    ''' Daylight Saving Time (DST) shift
+
+    Get current (if any) dst shift for local timezone.
+    This is needed since all pyephem times are based upon GMT *without* any
+    dst setting.
+
+    '''
     zg = time.localtime(curTime)
     wg = time.gmtime(curTime)
     dst_shift = (
@@ -42,10 +49,16 @@ def getDst(curTime=None):
     return dst_shift
 
 
-# Sun-related informations
-# Given lat/long this function returns rise_time and setting_time in epoch and
-# for how long (in sec) will the sunlight be "unstable" since dawn/sunset
 def getSun(latitude, longitude, curTime=None):
+    ''' Sun-related informations
+
+    Given lat/long this function returns rise_time and setting_time in
+    epoch and for how long (in sec) will the sunlight be "unstable" since
+    dawn/sunset.
+
+    NOTE: error exception ephem.NeverUpError means that the sun never reaches
+          chosen degrees above the horizon.
+    '''
     if curTime is None:
         curTime = time.time()
     obs = ephem.Observer()
@@ -65,10 +78,7 @@ def getSun(latitude, longitude, curTime=None):
         set_time = obs.next_setting(sun).datetime()
         set_epoch = int(set_time.strftime('%s')) - time.timezone - dst
         # increase horizon to calculate for how long the sunlight will rapidly
-        # change intensity
-        # error exception ephem.NeverUpError means that the sun never reaches
-        # 15 degrees above the horizon (15 is arbitrary and tested only for
-        # 46.04N latitude)
+        # change intensity. 15 is arbitrary and tested only for 46.04N latitude
         obs.horizon = '15'
         try:
             set_dur = obs.next_setting(sun).datetime()
@@ -109,11 +119,14 @@ def getSun(latitude, longitude, curTime=None):
     return rise_epoch, set_epoch, rise_dur, set_dur
 
 
-# Weather apis parser
-# Takes api name and, if present, through that api retrives current weather
-# informations.
-# If api is not listed or there's no internet connection, returns None.
 def url_parse(lat, lon, parser='wunderground'):
+    ''' Weather apis parser
+
+    Takes api name and, if present, through that api retrives current weather
+    informations.
+    If api is not listed or there's no internet connection, returns None.
+
+    '''
     if parser == 'wunderground':
         api = 'api.wunderground.com/auto/wui/geo/WXCurrentObXML/index.xml'
         params = urllib.urlencode({'query': '%.4f,%.4f' % (lat, lon)})
@@ -144,11 +157,14 @@ def url_parse(lat, lon, parser='wunderground'):
         return None
 
 
-# Weather informations
-# Asks the apis defined with url_parse function for weather informations and
-# transforms them into a multiplier (from defined min to defined max).
-# If a "weather state" is not indexed, then returns (min+max)/2.
 def get_daytime_mul(lat, lon):
+    ''' Weather informations
+
+    Asks the apis defined with url_parse function for weather informations and
+    transforms them into a multiplier (from defined min to defined max).
+    If a "weather state" is not indexed, then returns (min+max)/3.
+
+    '''
     for api in ('wunderground', 'google'):
         ws = url_parse(lat, lon, api)
         if ws is not None:
@@ -157,7 +173,7 @@ def get_daytime_mul(lat, lon):
     minimum = 0.2
     maximum = 1.0
     step = (maximum - minimum) / 7.0
-    fmul = (minimum + maximum) / 2.0
+    fmul = (minimum + maximum) / 3.0
     if ws is not None:
         # daytime multiplier based on weather conditions (from 1.0 to 0.2)
         weather_mul = {

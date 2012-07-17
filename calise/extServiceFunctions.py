@@ -24,8 +24,14 @@ import tempfile
 from calise.infos import __LowerName__
 
 
-# get DBUS_SESSION_BUS_ADDRESS enviroment var from "outside"
 def getDbusSession(user, display=None):
+    ''' Get process's owner 'DBUS_SESSION_BUS_ADDRESS' address
+
+    To send signals to a DBus session-bus from outside (session), session's
+    user dbus directory inside home folder has to be read to obtain
+    enviroment variable 'DBUS_SESSION_BUS_ADDRESS', from the files there.
+
+    '''
     retVal = None
     displayProg = re.compile('.*\#[ a-zA-Z]+(:[0-9.]+).*', re.DOTALL)
     busProg = re.compile('.*DBUS_SESSION_BUS_ADDRESS=([^\n]+)', re.DOTALL)
@@ -145,9 +151,15 @@ class tempUtils():
         return retCode
 
 
-# function that clear calise tempdir eventually left behind from unexpected
-# program end
 def clearTempdir(pid):
+    ''' Delete temporary directory
+
+    Function that clears calise tempdir eventually left behind from unexpected
+    program end.
+    Since it has no own controls, must be run after a check stated that the
+    program really exited unexpectedly leaving behind temporary directories.
+
+    '''
     print(
         "%s: warning: PID found but no running service "
         "instances." % sys.argv[0])
