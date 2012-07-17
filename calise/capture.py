@@ -53,7 +53,7 @@ def processs(lista):
     retVal = sdevListProcessor(lista)
     # 2/3 is arbitrary
     if len(retVal) < (2 / 3.0) * len(lista):
-        retVal = ponderatedProcessList2(lista)
+        retVal = ponderatedProcessList(lista)
     return retVal
 
 
