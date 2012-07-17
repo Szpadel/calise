@@ -77,20 +77,16 @@ class objects():
         if not self.newcomers['cts']:
             self.getCts()
         for x in range(3):
-            # while camera is being used by other processes, sleep 5 seconds.
-            # The first time this happens log a error.
-            i = 0
-            while True:
-                try:
-                    self.capture.startCapture()
-                    break
-                except KeyboardInterrupt:
-                    if i == 0:
-                        i += 1
-                        self.logger.error(
-                            "Camera object is busy, sending "
-                            "SIGTERM to main process...")
-                    time.sleep(5)
+            try:
+                self.capture.startCapture()
+            except KeyboardInterrupt:
+                import os
+                import sys
+                self.logger.critical(
+                    "Camera object is busy, sending "
+                    "SIGTERM to main process...")
+                os.kill(os.getpid(), 15)
+                sys.exit(1)
             try:
                 camValues = self.capture.getFrameBri(
                     self.arguments['capint'], self.arguments['capnum'])
@@ -99,6 +95,7 @@ class objects():
                     continue
                 else:
                     import os
+                    import sys
                     self.logger.critical(
                         "Third camera capture try failed in a row, sending "
                         "SIGTERM to main process...")

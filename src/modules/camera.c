@@ -607,20 +607,20 @@ device_init (PyDeviceObject *self)
 
     if (0 == xioctl (self->fd, VIDIOC_CROPCAP, &cropcap)) {
         crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        crop.c = cropcap.defrect; /* reset to default */
+        crop.c = cropcap.defrect; // reset to default
 
         if (-1 == xioctl (self->fd, VIDIOC_S_CROP, &crop)) {
             switch (errno) {
                 case EINVAL:
-                    /* Cropping not supported. */
+                    // Cropping not supported.
                     break;
                 default:
-                    /* Errors ignored. */
+                    // Errors ignored.
                     break;
             }
         }
     } else {
-            /* Errors ignored. */
+            // Errors ignored.
     }
 
     CLEAR (fmt);
