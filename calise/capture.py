@@ -87,8 +87,8 @@ def ponderatedProcessList(lista):
 
     '''
     k = None
-    for x in range(len(lista) - 3):
-        dn = sDev(lista[x:x + 4])
+    for x in range(len(lista) - 4):
+        dn = sDev(lista[x:x + 5])
         if k is None and dn <= 3:
             k = x
         if dn > 3:
