@@ -591,15 +591,15 @@ class CliCalibration():
         if geo is not None:
             lat = geo['lat']
             lon = geo['lon']
-        dummy = query_yes_no(customWrap(_(
-            "The program has found these coordinates (\"%s\": %s, %s) through "
-            "geoip lookup, would you like to use these value?")
-            % (geo['city'], lat, lon)), "yes")
-        print("")
-        if dummy == "yes":
-            self.lat = lat
-            self.lon = lon
-            return lat, lon
+            dummy = query_yes_no(customWrap(_(
+                "The program has found these coordinates (\"%s\": %s, %s) through "
+                "geoip lookup, would you like to use these value?")
+                % (geo['city'], lat, lon)), "yes")
+            print("")
+            if dummy == "yes":
+                self.lat = lat
+                self.lon = lon
+                return lat, lon
         geoConf = searchExisting(coordinates=True)
         if geoConf:
             config = ConfigParser.RawConfigParser()
