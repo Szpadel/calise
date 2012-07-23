@@ -1,8 +1,3 @@
-#include <Python.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 /*  Copyright (C)   2011-2012   Nicolo' Barbon
 
     This file is part of Calise.
@@ -22,7 +17,11 @@
 
 */
 
+#include <Python.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 #include <fcntl.h>              /* low-level i/o */
@@ -98,6 +97,8 @@ static PyObject* read_frame (PyDeviceObject *self);
 static PyObject* stop_capturing (PyDeviceObject *self);
 static PyObject* device_uninit (PyDeviceObject *self);
 static PyObject* device_close (PyDeviceObject *self);
+/* memory clearing related objects */
+static PyObject* clear_buffers ();
 
 /* internal/other functions */
 static int init_read (unsigned int buffer_size);
@@ -125,8 +126,9 @@ errno_msg (const char* s)
     char* msg_out;
 
     msg_fmt = "%s error: %s\n";
-    msg_out = (char*) malloc((strlen(msg_fmt) + 1 + strlen(strerror(errno))) * sizeof(char));
+    msg_out = (char*) malloc((strlen(msg_fmt) + 1 + strlen(s) + strlen(strerror(errno))) * sizeof(char));
     sprintf(msg_out, msg_fmt, s, strerror(errno));
+
     return msg_out;
 }
 
@@ -150,15 +152,15 @@ static PyObject* list_cameras()
     if (!ret_list)
         return NULL;
 
-    devices = (char**) malloc(sizeof(char *)*65);
+    devices = (char**) malloc(sizeof(char *) * 65);
 
-    device = (char*) malloc(sizeof(char)*13);
+    device = (char*) malloc(sizeof(char) * 13);
     strcpy(device,"/dev/video");
     fd = open(device, O_RDONLY);
     if (fd != -1) {
         devices[num] = device;
         num++;
-        device = (char*) malloc(sizeof(char)*13);
+        device = (char*) malloc(sizeof(char) * 13);
     }
     close(fd);
     /* v4l2 cameras can be /dev/video and /dev/video0 to /dev/video63 */
@@ -168,7 +170,7 @@ static PyObject* list_cameras()
         if (fd != -1) {
             devices[num] = device;
             num++;
-            device = (char*) malloc(sizeof(char)*13);
+            device = (char*) malloc(sizeof(char) * 13);
         }
         close(fd);
     }
@@ -622,9 +624,7 @@ device_init (PyDeviceObject *self)
     } else {
             // Errors ignored.
     }
-
     CLEAR (fmt);
-
     fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     fmt.fmt.pix.width       = 160;
     fmt.fmt.pix.height      = 120;
@@ -949,8 +949,6 @@ PyMODINIT_FUNC initcamera (void)
 {
     PyObject* m;
     char* dev_name = NULL;
-
-    //PyArg_ParseTuple(arg, "s", &dev_name);
 
     PyDevice_Type.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyDevice_Type) < 0)

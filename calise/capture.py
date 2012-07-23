@@ -170,11 +170,9 @@ class imaging():
         self.cameraObj.openPath()
         self.adjustCtrls()
         try:
-            # TODO: malloc() errors *can* happen there if camera is being used
-            #       by other processes
             self.cameraObj.initialize()
         except camera.Error as err:
-            if err[0] == 16:
+            if err[0] == errno.EBUSY:
                 logger.error(err[1].rstrip('\n'))
                 self.restoreCtrls()
                 self.cameraObj.closePath()
@@ -202,20 +200,29 @@ class imaging():
         self.cameraObj = None
 
     def getFrameBriSimple(self):
+        ''' Simple function to execute camera.readFrame()
+
+        Since camera capture (in camera C-module) has been set with flag
+        "O_NONBLOCK", until at least 1 buffer is free on the camera, asking for
+        a capture will raise V4L2.EAGAIN error.
+        Loop cycle is set to ask until valid value is returned but there's also
+        an error exception to avoid buffer lock-ups (default timer 10 seconds).
+
+        '''
         expiryTimer = time.time()
         val = None
         while val is None:
             try:
                 val = self.cameraObj.readFrame()
             except camera.Error as err:
-                if time.time() - expiryTimer > 30:
+                if time.time() - expiryTimer > 10:
                     self.stopCapture()
                     logger.error(
                         "Unable to get a frame from the camera: "
                         "device is continuously returning "
                         "V4L2.EAGAIN (Try Again)")
                     logger.error(
-                        "30 seconds anti-lock"
+                        "10 seconds anti-lock "
                         "timer expired, discarding capture session.")
                     raise KeyboardInterrupt
                 elif errno.EAGAIN == err[0]:
@@ -347,8 +354,8 @@ class imaging():
                                 self.ctrls[idx]['old'], cw))
                     self.ctrls[idx]['new'] = cw
             except camera.Error as err:
-                # errno 22 means control is not available
-                if err[0] != 22:
+                # EINVAL means control is not available (errorcode 22)
+                if err[0] != errno.EINVAL:
                     raise
 
     # Restore previously modified controls to original values

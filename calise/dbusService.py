@@ -140,7 +140,10 @@ class whatsmyname(threading.Thread):
                 self.logger.info(
                     "Sleeptime between captures changed from %.2f to %.2f"
                     % (objc.oldies[-2]['slp'], objc.oldies[-1]['slp']))
-        return 0
+
+    def setStop(self):
+        self.stop = True
+        self.objectClass.stop = True
 
 
 class dbusService(dbus.service.Object):
@@ -410,7 +413,7 @@ class methodHandler():
     def stopTh(self):
         if self.th is not None:
             if self.th.isAlive():
-                self.th.stop = True
+                self.th.setStop()
                 joinTime = (
                     self.th.objectClass.arguments['capnum'] *
                     self.th.objectClass.arguments['capint'] * 3)

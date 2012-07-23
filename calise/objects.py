@@ -28,6 +28,11 @@ from calise.infos import __LowerName__
 caliseCompute = computation()
 
 
+def forceTerm():
+    import sys
+    sys.exit(1)
+
+
 class objects():
 
     def __init__(self, settings):
@@ -39,6 +44,7 @@ class objects():
         self.gts = None  # geoip timestamp
         self.capture = imaging()
         self.capture.initializeCamera(self.arguments['cam'])
+        self.stop = False
 
     def dumpValues(self, allv=False):
         if allv:
@@ -68,39 +74,43 @@ class objects():
         ''' simple function to obtain ambient brightness
 
         NOTE: Capture module *can* raise "KeyboardInterrupt" if camera module
-              returns EAGAIN for more than 30 seconds, in that case this
-              function lets three tries to obtain a value for ambient
-              brightness.
-              After the 3rd try failed SIGTERM is send to main process and so
-              program is gracefully closed (with critical errors log).
+              returns EAGAIN for more than 15 seconds, in that case requests will
+              continue until *success* or TERM flag is set (through self.stop).
         '''
         if not self.newcomers['cts']:
             self.getCts()
-        for x in range(3):
-            try:
-                self.capture.startCapture()
-            except KeyboardInterrupt:
-                import os
-                import sys
-                self.logger.critical(
-                    "Camera object is busy, sending "
-                    "SIGTERM to main process...")
-                os.kill(os.getpid(), 15)
-                sys.exit(1)
+        while True:
+            # camera initialization
+            ci = 1
+            while ci != 0:
+                try:
+                    self.capture.startCapture()
+                    ci = 0
+                except KeyboardInterrupt:
+                    if ci == 1:
+                        ci = -1
+                        self.logger.error(
+                            "Camera object is busy. Waiting until it's "
+                            "available again (check every 10 seconds).")
+                    # check if term flag (self.stop) is set, once per second for
+                    # 15 seconds
+                    for x in range(15):
+                        if self.stop is True:
+                            forceTerm()
+                            break
+                        elif self.stop is False:
+                            time.sleep(1)
+            # camera capture
             try:
                 camValues = self.capture.getFrameBri(
                     self.arguments['capint'], self.arguments['capnum'])
             except KeyboardInterrupt:
-                if x < 2:
-                    continue
+                if self.stop is True:
+                    forceTerm()
+                    break
                 else:
-                    import os
-                    import sys
-                    self.logger.critical(
-                        "Third camera capture try failed in a row, sending "
-                        "SIGTERM to main process...")
-                    os.kill(os.getpid(), 15)
-                    sys.exit(1)
+                    continue
+            # camera uninitialization
             self.capture.stopCapture()
             camValues = processList(camValues)
             self.logger.debug(
