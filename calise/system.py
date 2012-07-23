@@ -48,13 +48,18 @@ class computation():
         self.bkpow = None # 0 = power-on, 1 = power-off
 
     # calculates ambient brightness correction using screen backlight value
-    def correction(self,amb=0,scr=0,dstep=0):
-        max_cor_mul = (1.0 / 3) * (180 - amb) / (amb + 10)
+    def correction(self, amb=0, scr=0, dstep=0):
+        max_cor_mul = (1 / 2.4) * (150 - amb) / (amb + 10)
         backlight_mul = (scr / 255.0 ) ** 2
-        self.cor = amb * max_cor_mul * backlight_mul * dstep
+        cor = amb * max_cor_mul * backlight_mul * dstep
+        if cor < 0:
+            cor = 0
+        self.cor = cor
 
     # calculates ambient brightness percentage using user-defined scale
-    def percentage(self,amb,ofs=0.0,delta=255/(100**(1/.73)),scr=0,dstep=0):
+    def percentage(
+        self, amb, ofs=0.0, delta=255 / (100 ** (1 / 0.73)), scr=0, dstep=0
+    ):
         if (scr == None)|(dstep == None):
             self.cor = 0
             scr = 0
@@ -64,8 +69,6 @@ class computation():
         self.scr = scr
         self.amb = amb
         cor = self.cor
-        if cor < 0:
-            cor = 0
         amb = amb - cor
         if ofs > amb:
             ofs = amb
