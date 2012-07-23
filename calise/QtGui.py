@@ -490,6 +490,7 @@ class LineParser(QtCore.QThread):
 
 
 class gui():
+
     def __init__(self, args):
         global arguments
         arguments = vars(args)
@@ -502,4 +503,4 @@ class gui():
         palette = app.palette()
         main = MainWindow()
         main.show()
-        sys.exit(app.exec_())
+        app.exec_()

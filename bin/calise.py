@@ -172,8 +172,11 @@ if __name__ == '__main__':
     if os.getenv('DISPLAY') is not None and arguments.gui is not False:
         try:
             import calise.QtGui
-            calise.QtGui.gui(arguments)
-            sys.exit(0)
+            rc = calise.QtGui.gui(arguments)
+            if service_wasAlive:
+                p = Popen(['calised', '--resume'], stdout=PIPE, stderr=PIPE)
+                p.communicate()
+            sys.exit(rc)
         except ImportError, err:
             print err
             arguments.gui = False
