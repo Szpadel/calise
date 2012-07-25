@@ -49,7 +49,7 @@ class computation():
 
     # calculates ambient brightness correction using screen backlight value
     def correction(self, amb=0, scr=0, dstep=0):
-        max_cor_mul = (2 * (160 − amb) ** 2) / float((amb + 136) ** 2)
+        max_cor_mul = (2 * (160 - amb) ** 2) / float((amb + 136) ** 2)
         screen_mul = (scr / 255.0 ) ** 2
         backlight_mul = (1.0 / 5.0) * (dstep / (5.0 / 4.0))
         cor = amb * max_cor_mul * screen_mul * backlight_mul
