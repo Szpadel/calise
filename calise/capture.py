@@ -141,6 +141,7 @@ class imaging():
         self.scr = None         # screen brightness 0 < 255
         self.ctrls = {}         # controls (all queried) dictionary
         self.stop = None        # readFrame loop control flag
+        self.kill = False       # KILL flag for readFrameSimple() errors
         self.logger = logging.getLogger(".".join([__LowerName__, 'capture']))
         self.deviceStatus = None
         self.authorizer = None
@@ -215,14 +216,17 @@ class imaging():
             try:
                 val = self.cameraObj.readFrame()
             except camera.Error as err:
-                if time.time() - expiryTimer > 10:
+                if self.kill is True:
+                    self.kill = False
+                    raise KeyboardInterrupt
+                if time.time() - expiryTimer > 30:
                     self.stopCapture()
                     logger.error(
                         "Unable to get a frame from the camera: "
                         "device is continuously returning "
                         "V4L2.EAGAIN (Try Again)")
                     logger.error(
-                        "10 seconds anti-lock "
+                        "30 seconds anti-lock "
                         "timer expired, discarding capture session.")
                     raise KeyboardInterrupt
                 elif errno.EAGAIN == err[0]:
