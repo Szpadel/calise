@@ -220,8 +220,7 @@ class imaging():
                     logger.error(
                         "Unable to get a frame from the camera: "
                         "device is continuously returning "
-                        "V4L2.EAGAIN (Try Again)")
-                    logger.error(
+                        "V4L2.EAGAIN (Try Again).\n"
                         "5 seconds anti-lock "
                         "timer expired, discarding capture session.")
                     raise KeyboardInterrupt
