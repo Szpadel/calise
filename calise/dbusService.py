@@ -144,10 +144,6 @@ class whatsmyname(threading.Thread):
     def setStop(self):
         self.stop = True
         self.objectClass.stop = True
-        self.breakCapture()
-
-    def breakCapture(self):
-        self.objectClass.capture.kill = True
 
 
 class dbusService(dbus.service.Object):
@@ -436,8 +432,6 @@ class methodHandler():
                 # set pause flag from False to None (when thread will be
                 # effectively paused this flag will be set to True)
                 self.th.pause = None
-                # breaks if capture is in 30 seconds lock state
-                self.th.breakCapture()
                 while self.th.pause is not True:
                     time.sleep(0.1)
                 return 0

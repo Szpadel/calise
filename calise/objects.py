@@ -93,8 +93,8 @@ class objects():
                             "Camera object is busy. Waiting until it's "
                             "available again (check every 10 seconds).")
                     # check if term flag (self.stop) is set, once per second for
-                    # 15 seconds
-                    for x in range(15):
+                    # 10 seconds
+                    for x in range(10):
                         if self.stop is True:
                             forceTerm()
                             break
