@@ -70,7 +70,7 @@ def sdevListProcessor(lista):
     maximum = avg + dev
     retList = []
     for idx in range(len(lista)):
-        if not dev > 3 or not (lista[idx] > maximum or lista[idx] < minimum):
+        if not dev > 3 and not (lista[idx] > maximum or lista[idx] < minimum):
             retList.append(lista[idx])
     return retList
 
