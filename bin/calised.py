@@ -111,6 +111,10 @@ def checkExecArguments(args):
 # service-start function
 def mainService(kargs):
     retCode = 0
+    # Set 'niceness' level to 10 if process has not been 'niced' by the user
+    niceness = os.nice(0)
+    if niceness == 0:
+        niceness = os.nice(10)
     # Check for arguments inadmissibility
     checkServiceCommands(kargs.args.keys())
     # Leave only profile setting on settings global so that when
