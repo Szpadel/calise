@@ -74,8 +74,9 @@ class objects():
         ''' simple function to obtain ambient brightness
 
         NOTE: Capture module *can* raise "KeyboardInterrupt" if camera module
-              returns EAGAIN for more than 15 seconds, in that case requests will
-              continue until *success* or TERM flag is set (through self.stop).
+              returns EAGAIN for more than 15 seconds, in that case requests
+              will continue until *success* or TERM flag is set (through
+              self.stop).
         '''
         if not self.newcomers['cts']:
             self.getCts()
@@ -325,8 +326,8 @@ class objects():
             else:
                 sleepTime = self.arguments['nightst']
         # happens on artic regions, where the sun never reaches 15 degrees
-        # above the horizon, so, actually, dawn/sunset time equal half each of
-        # the time the sun spend above the horizon
+        # above the horizon, so, actually, dawn/sunset time equals to half of
+        # the time the sun spends above the horizon
         elif sus == daw + daw_tw:
             if cur_time < daw + daw_tw / 2.0:
                 self.newcomers['css'] = "dawn"
