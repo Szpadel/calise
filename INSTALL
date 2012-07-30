@@ -1,7 +1,14 @@
 Calise setup instructions
 
+NOTE: This is a brief installation guide, for a complete and more readable
+      version of install instructions take a look at wiki page "Installation"
+      on calise site:
+        http://calise.sourceforge.net/mediawiki/index.php/Installation
+
+
 
 Generic Installation
+
 NOTE: for differences in distro-specific installation refer below
 
   Get these needed python2 modules:
