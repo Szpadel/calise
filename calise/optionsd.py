@@ -38,6 +38,7 @@ defaultSettings = {
     'loglevel': 'info',
     'logfile': None,
     'screen': True,
+    'scrmul': None,
     'geoip': True,
     'weather': True,
     'dayst': 300.0,
@@ -205,6 +206,10 @@ class serviceGetArgs():
             action='store_true', default=None, dest='nscreen',
             help="disable screen-brightness compensation")
         parser.add_argument(
+            '--compensation-multiplier',
+            metavar='<float>', dest='scrmul', default=None,
+            help="screen-brightness compensation multiplier")
+        parser.add_argument(
             '--weather',
             action='store_true', default=None, dest='yweather',
             help="enable weather internet lookup")
@@ -295,6 +300,8 @@ class serviceGetArgs():
             settings['screen'] = True
         elif args['nscreen']:
             settings['screen'] = False
+        if args['scrmul']:
+            settings['scrmul'] = args['scrmul']
         if args['yweather']:
             settings['weather'] = True
         elif args['nweather']:
@@ -380,6 +387,7 @@ class profiler():
             'average': (int, 'avg'),
             'capture-delay': (float, 'gap'),
             'screen-compensation': (bool, 'screen'),
+            'compensation-multiplier': (float, 'scrmul'),
         },
         'Info': {
             'loglevel': (str, 'loglevel'),

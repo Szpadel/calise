@@ -126,11 +126,17 @@ class objects():
         if not self.newcomers['cts']:
             self.getCts()
         if self.arguments['screen'] is True:
+            if self.arguments['scrmul'] is None:
+                self.getScrMul()
             self.capture.getScreenBri()
             self.newcomers['scr'] = self.capture.scr
         else:
             self.newcomers['scr'] = 0
         return self.newcomers['scr']
+    
+    def getScrMul(self):
+        self.arguments['scrmul'] = self.capture.getScreenMul()
+        print "newmul: %f" % self.arguments['scrmul']
 
     # obtains brightness percentage value, corrected if needed (by the amount
     # of brightness coming from the screen)
@@ -142,6 +148,7 @@ class objects():
             self.newcomers['amb'],
             self.arguments['offset'], self.arguments['delta'],
             self.newcomers['scr'],
+            self.arguments['scrmul'],
             self.adjustScale(self.newcomers['cbs']))
         self.logger.debug(
             "Correction amount (in /255): %4.1f" % caliseCompute.cor)

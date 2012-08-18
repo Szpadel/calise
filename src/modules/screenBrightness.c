@@ -22,15 +22,55 @@
 #include <stdio.h>
 #include <X11/Xlib.h>
 
+
 /* standard cameramodule python-error */
 //static PyObject* ScreenError;
 
-/* functions available to module users */
-static PyObject* getDisplayBrightness (PyObject* self, PyObject *args);
 
-/* functions for internal use */
-static int getRootBrightness(char* screen_name)
+/* functions declaration */
+static PyObject* getDisplayBrightness (PyObject* self, PyObject *args);
+static PyObject* getDisplaySize (PyObject* self, PyObject *args);
+
+
+/* functions */
+static PyObject *
+getDisplaySize(PyObject *self, PyObject *args)
 {
+    char* screen_name = NULL;
+
+    if (!PyArg_ParseTuple(args, "s", &screen_name))
+        return NULL;
+    
+    Display
+        *display;
+
+    int
+        xmm, ymm;
+
+    display = XOpenDisplay(screen_name);
+    if ( !display )
+    {
+        return NULL;
+    }
+
+    // *real* screen size in mm
+    xmm = XDisplayWidthMM(display, 0);
+    ymm = XDisplayHeightMM(display, 0);
+    
+    XCloseDisplay(display);
+    
+    return Py_BuildValue("ii", xmm, ymm);
+}
+
+
+static PyObject *
+getDisplayBrightness(PyObject *self, PyObject *args)
+{
+    char* screen_name = NULL;
+
+    if (!PyArg_ParseTuple(args, "s", &screen_name))
+        return NULL;
+    
     Display
         *display;
 
@@ -52,9 +92,9 @@ static int getRootBrightness(char* screen_name)
     {
         return NULL;
     }
-
+    
     // window frame size definition
-    pct = 0.85;
+    pct = 0.85;  // arbitrary value for frame crop: only pixels from center to 85% of height/lenght are computed.
     w = (int) (pct * XDisplayWidth(display, 0));
     h = (int) (pct * XDisplayHeight(display, 0));
     x = (XDisplayWidth(display, 0) - w) / 2;
@@ -63,7 +103,7 @@ static int getRootBrightness(char* screen_name)
     root_window=XRootWindow(display, XDefaultScreen(display));
     ximage = XGetImage(display, root_window, x,y, w,h, AllPlanes, ZPixmap);
     if (ximage == (XImage *) NULL)
-        return 1;
+        return NULL;
 
     XCloseDisplay(display);
 
@@ -94,32 +134,14 @@ static int getRootBrightness(char* screen_name)
     g = g/area;
     b = b/area;
 
-    return (0.299 * r + 0.587 * g + 0.114 * b);
+    return Py_BuildValue("f", 0.299 * r + 0.587 * g + 0.114 * b);
 }
 
-
-static PyObject *
-getDisplayBrightness(PyObject *self, PyObject *args)
-{
-    char* screen_name = NULL;
-
-    if (!PyArg_ParseTuple(args, "s", &screen_name))
-        return NULL;
-
-    // call brightness function and return int /255 brightness value
-    int screenBrightnessValue;
-
-    screenBrightnessValue = getRootBrightness(screen_name);
-    if ( !screenBrightnessValue ) {
-        Py_RETURN_NONE;
-    }
-
-    return Py_BuildValue("i", screenBrightnessValue);
-}
 
 /* Python related stuff */
 static PyMethodDef screenBrightness_funcs[] = {
     {"getDisplayBrightness", (PyCFunction)getDisplayBrightness, METH_VARARGS},
+    {"getDisplaySize", (PyCFunction)getDisplaySize, METH_VARARGS},
     {NULL}
 };
 

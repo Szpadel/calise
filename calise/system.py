@@ -48,25 +48,28 @@ class computation():
         self.bkpow = None # 0 = power-on, 1 = power-off
 
     # calculates ambient brightness correction using screen backlight value
-    def correction(self, amb=0, scr=0, dstep=0):
-        max_cor_mul = (2 * (160 - amb) ** 2) / float((amb + 136) ** 2)
+    def correction(self, amb=0, scr=0, areamul=0, dstep=0):
+        up_lim = 160
+        max_cor_mul = (2 * (up_lim - amb) ** 2) / float((amb + 136) ** 2)
         screen_mul = (scr / 255.0 ) ** 2
         backlight_mul = (1.0 / 5.0) + (dstep / (5.0 / 4.0))
-        cor = amb * max_cor_mul * screen_mul * backlight_mul
-        if amb > 160:
+        cor = amb * max_cor_mul * screen_mul * backlight_mul * areamul
+        if amb > up_lim:
             cor = 0
         self.cor = cor
 
     # calculates ambient brightness percentage using user-defined scale
     def percentage(
-        self, amb, ofs=0.0, delta=255 / (100 ** (1 / 0.73)), scr=0, dstep=0
+        self,
+        amb, ofs=0.0, delta=255 / (100 ** (1 / 0.73)),
+        scr=0, areamul=0, dstep=0,
     ):
         if (scr == None)|(dstep == None):
             self.cor = 0
             scr = 0
             dsetp = 0
         else:
-            self.correction(amb, scr, dstep)
+            self.correction(amb, scr, areamul, dstep)
         self.scr = scr
         self.amb = amb
         cor = self.cor
@@ -230,18 +233,18 @@ class execution():
     # main function of the class, takes all class vars and returns a backlight
     # step according to them. If there is a difference greater than 20 between
     # two consequent percentages, resets all data
-    def elaborate(self,amb=None,scr=None):
+    def elaborate(self,amb=None,scr=None, areamul=None):
         if amb is not None:
-	    self.store(amb,scr)
+	    self.store(amb, scr)
 	amb = self.data['ambient'][-1]
 	scr = self.data['screen'][-1]
 	if len(self.data['timestamp']) < len(self.data['ambient']):
-	    self.data['timestamp'].append(round(time(),3))
+	    self.data['timestamp'].append(round(time(), 3))
         comp = computation()
         comp.get_values('step', self.pos)
         comp.percentage(
             amb, self.ofs, self.delta,
-            scr, self.AdjustScale(comp.bkstp)
+            scr, areamul, self.AdjustScale(comp.bkstp)
         )
         self.data['correction'].append(comp.cor)
         self.data['percent'].append(comp.pct)

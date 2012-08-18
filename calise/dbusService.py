@@ -521,6 +521,10 @@ class methodHandler():
             value = strToBool(value)
             self.settings['screen'] = value
             self.th.objectClass.arguments['screen'] = value
+        elif idx in ['scrmul']:
+            value = float(value)
+            self.settings['scrmul'] = value
+            self.th.objectClass.arguments['scrmul'] = value
         elif idx in ['latitude']:
             value = float(value)
             self.settings['latitude'] = value

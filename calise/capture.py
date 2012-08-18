@@ -374,9 +374,7 @@ class imaging():
                         self.ctrls[idx]['old'],
                         self.ctrls[idx]['new']))
 
-    # obtains %scr (screen brightness in /255)
-    def getScreenBri(self):
-        self.scr = 0
+    def getActiveDisplay(self):
         display = os.getenv('DISPLAY')
         if not display and os.getuid() == 0:
             if self.authorizer is None:
@@ -394,12 +392,32 @@ class imaging():
                     logger.debug("X11 authority set to %s" % xauthority)
                 if os.getenv('XAUTHORITY'):
                     display = self.authorizer.display
+        return display
+
+    # obtains %scr (screen brightness in /255)
+    def getScreenBri(self):
+        self.scr = 0
+        display = self.getActiveDisplay()
         if display:
             scr = screenBrightness.getDisplayBrightness(display)
             if scr:
                 self.scr = scr
         logger.debug("Screen capture returned %s" % self.scr)
         return self.scr
+    
+    def getScreenMul(self):
+        mul = None
+        display = self.getActiveDisplay()
+        if display:
+            mmsize = screenBrightness.getDisplaySize(display)
+            if mmsize:
+                refbase = (((17 * 2.35) ** 2) / 356) ** .5
+                refmmx = 160 * refbase
+                refmmy = 100 * refbase
+                mmx, mmy = mmsize
+                mul = ((mmx * mmy) / float(refmmx * refmmy)) ** 2
+        return mul
+        
 
 
 class secessionist():

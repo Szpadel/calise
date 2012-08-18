@@ -152,15 +152,17 @@ class mainLoop():
     def exeloop(self):
         self.timeref = time.time() # start time of the loop
         self.step0.getFrameBriSimple()
+        if self.args.screen is True:
+            mul = self.step0.getScreenMul()
         if (
             self.args.screen is True and
             self.basetime + self.sct <= time.time()
-            ):
+        ):
             self.step0.getScreenBri()
             self.basetime = time.time()
         elif self.args.screen is None:
             self.step0.scr = 0.0
-        self.step1.elaborate(self.step0.amb, self.step0.scr)
+        self.step1.elaborate(self.step0.amb, self.step0.scr, mul)
         if (
             ( self.args.auto ) and
             (
