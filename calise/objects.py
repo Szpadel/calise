@@ -63,7 +63,7 @@ class objects():
             "css": None,  # sun state: either dawn, day, sunset or night
             "nss": None,  # seconds before next sun state
             "slp": None,  # thread sleeptime
-            }
+        }
 
     # obtain timestamp
     def getCts(self):

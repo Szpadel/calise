@@ -34,6 +34,7 @@ palette = None   # palette object corresponding to system palette (from theme)
 arguments = None # dictionary with arguments (first data) returned by thread
 procData = None  # dictionary with current thread data, updated every capture
 
+
 '''main window's main widget
 Everything appears on MainWindow must be declared there and added to MainVbox
 '''
@@ -126,7 +127,7 @@ class MainWid(QtGui.QWidget):
         self.ExportBtn.hide()
         self.setLayout(MainVbox)
 
-    def OnPause(self,boolean):
+    def OnPause(self, boolean):
         if boolean:
             self.com.td.sig = 'pause'
             self.bbw.enPause(True)
@@ -137,8 +138,9 @@ class MainWid(QtGui.QWidget):
         QtCore.QObject.emit(
                 self, QtCore.SIGNAL('pauseToggled(bool)'), boolean )
 
-    def OnRec(self,boolean):
-        self.com.td.args.logdata = not self.com.td.args.logdata
+    def OnRec(self, boolean):
+        current = self.com.td.arguments['record']
+        self.com.td.arguments['record'] = not current
 
     # sends CUSTOM2 signal to export recorded data to /tmp/whatever.csv,
     # then copies that csv file content to a user's specified (through dialog)
@@ -268,6 +270,10 @@ class MainWindow(QtGui.QMainWindow):
         self.showMainWindow.toggled.connect(self.onShowMainWindow)
         about.triggered.connect(self.OnAboutCalise)
         exit2.triggered.connect(self.OnClose)
+        
+        # Other signals
+        self.connect(
+            self.mainWidget.com,  QtCore.SIGNAL('killReq()'), self.OnClose)
 
         # Set QAction Behavior
         self.shTray.toggle()
@@ -315,14 +321,14 @@ class MainWindow(QtGui.QMainWindow):
         self.CtxMenu.addAction(exit)
 
         # Set tooltips
-        self.trayIcon.setToolTip(QtCore.QString.fromUtf8(_( 'Camera active' )))
+        self.trayIcon.setToolTip(QtCore.QString.fromUtf8(_('Camera active')))
 
         self.mainWidget.AddInBtn.toggled.connect(self.OnAddIn)
         self.trayIcon.setContextMenu(self.trayMenuBar)
         self.setCentralWidget(self.mainWidget)
         QtCore.QObject.connect(
             self.mainWidget,
-            QtCore.SIGNAL('pauseToggled(bool)'), self.updateTrayIcon )
+            QtCore.SIGNAL('pauseToggled(bool)'), self.updateTrayIcon)
         QtCore.QObject.connect(
             self.trayIcon,
             QtCore.SIGNAL('activated(QSystemTrayIcon::ActivationReason)'),
@@ -464,8 +470,34 @@ class MainWindow(QtGui.QMainWindow):
 class LineParser(QtCore.QThread):
 
     def __init__(self):
-        self.td = mainLoop(nsargs)
+        self.td = mainLoop(arguments)
+        self.initSignals()
         QtCore.QThread.__init__(self)
+    
+    def initSignals(self):
+        signal.signal(signal.SIGCONT, self.clear)
+        signal.signal(signal.SIGTERM, self.clear)
+        signal.signal(signal.SIGINT, self.clear)
+        signal.signal(signal.SIGTSTP, self.clear)
+    
+    # manage clean exit/pause (mostly same as /bin/calise one)
+    def clear(self, sig=None, func=None):
+        if sig == signal.SIGTERM or sig == signal.SIGINT:
+            if self.td is not None:
+                self.td.sig = 'quit'
+                for x in range(20):
+                    if not self.isRunning():
+                        break
+                    time.sleep(0.1)
+                    #if x == 19:
+                    #    os.kill(os.getpid(), signal.SIGKILL)
+                QtCore.QObject.emit(self, QtCore.SIGNAL('killReq()'))
+        elif sig == signal.SIGTSTP:
+            if self.td is not None:
+                self.td.sig = 'pause'
+        elif sig == signal.SIGCONT:
+            if self.td is not None:
+                self.td.sig = 'resume'
 
     def run(self):
         self.td.mainOp()
@@ -480,10 +512,10 @@ class LineParser(QtCore.QThread):
             if lockTime is None or lockTime < 0:
                 lockTime = _('None')
             dataDict['lock'] = lockTime
-            dataDict['rec'] = self.td.args.logdata
+            dataDict['rec'] = self.td.arguments['record']
             global procData
             procData = dataDict
-            QtCore.QObject.emit( self,QtCore.SIGNAL('valueChanged()'))
+            QtCore.QObject.emit(self, QtCore.SIGNAL('valueChanged()'))
             if self.td.drowsiness() is True:
                 break
         self.td.mainEd()
@@ -491,11 +523,9 @@ class LineParser(QtCore.QThread):
 
 class gui():
 
-    def __init__(self, args):
+    def __init__(self, settings):
         global arguments
-        arguments = vars(args)
-        global nsargs
-        nsargs = args
+        arguments = settings
         global app
         app = QtGui.QApplication(sys.argv)
         app.setQuitOnLastWindowClosed(False)

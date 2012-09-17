@@ -129,7 +129,7 @@ def mainService(kargs):
     logObject = tempfile.NamedTemporaryFile(
         prefix='%s-' % os.path.join(tempdir, __LowerName__), delete=False)
     # setting-related operations
-    defaults = options.getDefaultSettings()
+    defaults = options.getDefaultSettings(sys.argv[0])
     options.settings['logfile'] = logObject.name
     logLevel = defaults['loglevel']
     logFile = logObject.name

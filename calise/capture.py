@@ -228,6 +228,7 @@ class imaging():
                 else:
                     raise
         self.amb = val
+        #logger.debug("Ambient brightness value got %s" % val)
         return val
 
     def getFrameBri(self, interval=None, captures=1, loop=False, keep=True):
@@ -363,8 +364,7 @@ class imaging():
             # raise if somehow 'new' has not been initialized
             if self.ctrls[idx]['new'] is None:
                 raise CameraError(
-                    5,
-                    "Control not initialized for \'%s\' (%d)"
+                    5, "Control not initialized for \'%s\' (%d)"
                     % (self.ctrls[idx]['name'], x))
             if self.ctrls[idx]['new'] != self.ctrls[idx]['old']:
                 self.cameraObj.setCtrl(x, self.ctrls[idx]['old'])
@@ -411,11 +411,12 @@ class imaging():
         if display:
             mmsize = screenBrightness.getDisplaySize(display)
             if mmsize:
-                refbase = (((17 * 2.35) ** 2) / 356) ** .5
+                refbase = (((17 * 2.54) ** 2) / 356) ** .5
                 refmmx = 160 * refbase
                 refmmy = 100 * refbase
                 mmx, mmy = mmsize
                 mul = ((mmx * mmy) / float(refmmx * refmmy)) ** 2
+                logger.debug("Compensation multiplier set to %.2f" % mul)
         return mul
         
 

@@ -24,14 +24,18 @@ from xdg.BaseDirectory import load_config_paths
 from calise.infos import __LowerName__, __version__
 
 
-# globals
+# Store either interactive or service versionss settings
 settings = {}
+
+# Logging
+logger = logging.getLogger('.'.join([__LowerName__, 'options']))
+
+# Service commands definitions
 execCommands = ['kill', 'restart', 'pause', 'resume', 'capture']
 queryCommands = ['dump', 'dumpall', 'dumpsettings', 'check']
 serviceCommands = execCommands + queryCommands
-logger = logging.getLogger('.'.join([__LowerName__, 'options']))
 
-# Default settings
+# Default service version's settings
 defaultSettings = {
     'capnum': 14,
     'capint': 0.1,
@@ -44,6 +48,25 @@ defaultSettings = {
     'dayst': 300.0,
     'dusksm': 0.7,
     'nightst': 0.0,
+    'path': None,
+}
+
+# Default interactive version's settings
+defIntSetings = {
+    'gap': 0.67,
+    'avg': int(round((90 / 0.67), 0)),
+    'logfile': None,
+    'screen': True,
+    'scrmul': None,
+    'auto': True,
+    'configure': False,
+    'record': False,
+    'recfile': '%s.csv' % __LowerName__,
+    'loglevel': 'warning',
+    'logfile': None,
+    'gui': True,
+    'verbose': False,
+    'path': None,
 }
 
 
@@ -55,8 +78,12 @@ def checkSettingsArguments():
 
 
 # simple wrapper for default settings
-def getDefaultSettings():
-    return defaultSettings
+def getDefaultSettings(prefix):
+    prefix = os.path.basename(prefix)
+    if prefix == '%s' % __LowerName__:
+        return defIntSetings
+    elif prefix == '%sd' % __LowerName__: 
+        return defaultSettings
 
 
 def get_path(pname='default', sufx='.conf'):
@@ -86,11 +113,14 @@ class wlogger():
     *must* be called before requesting any customized logger.
 
     NOTE: Its modularity lets every log parameter be easily changed even if
-          already started.
+          already started (such as for service version settings).
     '''
 
     def __init__(self, loglevel='info', logfile=None):
-        numLvl = self.getILvl(loglevel)
+        if loglevel:
+            numLvl = self.getILvl(loglevel)
+        else:
+            numLvl = None
         self.init_logs(numLvl, logfile)
 
     def getILvl(self, loglevel):
@@ -99,39 +129,65 @@ class wlogger():
             raise ValueError("Invalid log level: %s" % loglevel)
         return numeric_level
 
-    def init_logs(self, ilvl, flog=None):
+    def init_logs(self, ilvl, flog=None, slog=None):
         self.logger = logging.getLogger(__LowerName__)
         self.logger.setLevel(logging.DEBUG)
-        self.setStreamHandle(ilvl)
+        if ilvl:
+            self.setStreamHandle(ilvl)
         if flog:
             self.setFileHandle(flog)
+
+    def getFormat(self, handler):
+        formatterCh = logging.Formatter(
+            "[%(asctime)s][%(levelname)s - %(name)s] %(message)s",
+            datefmt="%H:%M:%S")
+        formatterFh = logging.Formatter(
+            "[%(asctime)s][%(levelname)s - %(name)s] %(message)s",
+            datefmt="%Y/%m/%d %H:%M:%S")
+        if handler == 'ch':
+            return formatterCh
+        elif handler == 'fh':
+            return formatterFh
 
     def setStreamHandle(self, ilvl):
         self.ch = logging.StreamHandler()
         self.ch.setLevel(ilvl)
-        formatterCh = logging.Formatter(
-            "[%(asctime)s][%(levelname)s - %(name)s] %(message)s",
-            datefmt="%H:%M:%S")
+        formatterCh = self.getFormat('ch')
         self.ch.setFormatter(formatterCh)
         self.logger.addHandler(self.ch)
+
+    def setTemporaryHandler(self):
+        import logging.handlers
+        self.th = logging.handlers.MemoryHandler(2)
+        formatterTh = self.getFormat('fh')
+        self.th.setFormatter(formatterTh)
+        self.logger.addHandler(self.th)
 
     def setFileHandle(self, flog):
         self.fh = logging.FileHandler(flog)
         self.fh.setLevel(logging.DEBUG)
-        formatterFh = logging.Formatter(
-            "[%(asctime)s][%(levelname)s - %(name)s] %(message)s",
-            datefmt="%Y/%m/%d %H:%M:%S")
+        formatterFh = self.getFormat('fh')
         self.fh.setFormatter(formatterFh)
         self.logger.addHandler(self.fh)
 
+    def changeLogLevel(self, loglevel):
+        if loglevel:
+            ilvl = self.getILvl(loglevel)
+            self.ch.setLevel(ilvl)
+        else:
+            self.logger.removeHandler(self.ch)
+            self.ch.close()
+
+    def temporaryToPermanentSwitch(self):
+        self.th.setTarget(self.fh)
+        self.logger.removeHandler(self.th)
+        self.th.close()
+    
     def changeLogFile(self, flog):
         self.logger.removeHandler(self.fh)
         self.fh.close()
-        self.setFileHandle(flog)
-
-    def changeLogLevel(self, loglevel):
-        ilvl = self.getILvl(loglevel)
-        self.ch.setLevel(ilvl)
+        if flog:
+            self.setFileHandle(flog)
 
 
 class serviceGetArgs():
@@ -144,7 +200,7 @@ class serviceGetArgs():
         parser = argparse.ArgumentParser(
             description=(
                 "A service that change screen's backlight according to "
-                "ambient brightness through any webcam"),
+                "ambient brightness through any v4l2 compatible camera"),
             prog="calised")
         parser.add_argument(
             '--version',
@@ -344,6 +400,143 @@ class serviceGetArgs():
         self.execArgs = execArgs
 
 
+class coreGetArgs():
+
+    def __init__(self, argslist=None):
+        self.argslist = argslist
+        self.arguments = None
+
+    def init_args(self):
+        parser = argparse.ArgumentParser(
+            description=(
+                "A program that change screen's backlight according to "
+                "ambient brightness through any v4l2 compatible camera"),
+            prog="calised")
+        parser.add_argument(
+            '--version',
+            action='version',
+            version='%(pro)s %(ver)s' % dict(pro='%(prog)s', ver=__version__),
+            help="display current version")
+        parser.add_argument(
+            '--calibrate', '--configure',
+            action='store_true', default=None, dest='configure',
+            help="launch the calibration")
+        parser.add_argument(
+            '-p', '--profile',
+            metavar='<profile>', dest='pname', default='default',
+            help="profile name or path")
+        parser.add_argument(
+            '--path',
+            metavar='<path>', dest='path', default=None,
+            help="sysfs brightness path")
+        parser.add_argument(
+            '--capture-interval', '--gap',
+            metavar='<float>', dest='gap', default=None,
+            help=(
+                "seconds between consecutive captures (default: %f)"
+                % defIntSetings['gap']))
+        parser.add_argument(
+            '--verbose',
+            action='store_true', default=None, dest='yverbose',
+            help="enable verbose output")
+        parser.add_argument(
+            '--no-verbose',
+            action='store_true', default=None, dest='nverbose',
+            help="disable verbose output")
+        parser.add_argument(
+            '--gui',
+            action='store_true', default=None, dest='ygui',
+            help="enable GUI")
+        parser.add_argument(
+            '--no-gui',
+            action='store_true', default=None, dest='ngui',
+            help="disable GUI (run cli-interface)")
+        parser.add_argument(
+            '--screen',
+            action='store_true', default=None, dest='yscreen',
+            help="enable screen-brightness compensation")
+        parser.add_argument(
+            '--no-screen',
+            action='store_true', default=None, dest='nscreen',
+            help="disable screen-brightness compensation")
+        parser.add_argument(
+            '--compensation-multiplier',
+            metavar='<float>', dest='scrmul', default=None,
+            help="screen-brightness compensation multiplier")
+        parser.add_argument(
+            '--auto',
+            action='store_true', default=None, dest='yauto',
+            help="enable automatic backlight level change")
+        parser.add_argument(
+            '--no-auto',
+            action='store_true', default=None, dest='nauto',
+            help="disable automatic backlight level change")
+        parser.add_argument(
+            '--record',
+            action='store_true', default=None, dest='yrecord',
+            help="enable data record")
+        parser.add_argument(
+            '--no-record',
+            action='store_true', default=None, dest='nrecord',
+            help="disable data record")
+        parser.add_argument(
+            '--recordfile',
+            metavar='<path>', dest='recfile', default=None,
+            help=(
+                "record output file (cli-interface will export recorded "
+                "data there, gui-interface will let you choose)"))
+        parser.add_argument(
+            '--logfile',
+            metavar='<path>', dest='logfile', default=None,
+            help=(
+                "log output file (none if not set)"))
+        self.arguments = vars(parser.parse_args(self.argslist))
+        self.parser = parser
+
+    # Settings parser from cli-arguments
+    def parse_settings(self):
+        global settings
+        args = self.arguments
+        # Settings related arguments
+        if args['configure']:
+            settings['configure'] = args['configure']
+        if args['path']:
+            settings['path'] = args['path']
+        if args['pname']:
+            settings['profile'] = args['pname']
+        if args['gap']:
+            settings['gap'] = float(args['gap'])
+        if args['yverbose']:
+            settings['verbose'] = True
+        elif args['nverbose']:
+            settings['verbose'] = False
+        if args['ygui']:
+            settings['gui'] = True
+        elif args['ngui']:
+            settings['gui'] = False
+        if args['yscreen']:
+            settings['screen'] = True
+        elif args['nscreen']:
+            settings['screen'] = False
+        if args['scrmul']:
+            settings['scrmul'] = args['scrmul']
+        if args['yauto']:
+            settings['auto'] = True
+        elif args['nauto']:
+            settings['auto'] = False
+        # Logging related arguments
+        if args['yrecord']:
+            settings['record'] = True
+        elif args['nrecord']:
+            settings['record'] = False
+        if args['recfile']:
+            settings['recfile'] = args['recfile']
+        if args['logfile']:
+            settings['logfile'] = args['logfile']
+        # Arguments variable post-processing
+        ''' put here any post process to be applied to arguments '''
+
+
 class profiler():
 
     # options syntax:
@@ -388,6 +581,11 @@ class profiler():
             'capture-delay': (float, 'gap'),
             'screen-compensation': (bool, 'screen'),
             'compensation-multiplier': (float, 'scrmul'),
+            'auto': (bool, 'auto'),
+            'record': (bool, 'record'),
+            'recordfile': (str, 'recfile'),
+            'gui': (bool, 'gui'),
+            'verbose': (bool, 'verbose'),
         },
         'Info': {
             'loglevel': (str, 'loglevel'),

@@ -27,8 +27,8 @@ from calise.system import execution
 
 class ExecThread(threading.Thread):
 
-    def __init__(self, args):
-        self.func = mainLoop(args)
+    def __init__(self, settings):
+        self.func = mainLoop(settings)
         threading.Thread.__init__(self)
 
     def run(self):
@@ -37,7 +37,9 @@ class ExecThread(threading.Thread):
 
 class mainLoop():
 
-    def __init__(self, args):
+    def __init__(self, settings):
+        self.resetComers()
+        self.arguments = settings
         self.step0 = None # capture class
         self.step1 = None # execution class
         self.lock = None
@@ -48,18 +50,27 @@ class mainLoop():
         self.sct = 5 # seconds between screencaptures:
                      # it's useless to capture the whole screen more often,
                      # maybe it can increased
-        self.args = args
-        self.ExpPath = self.args.logpath # data export path
-
+        self.ExpPath = self.arguments['recfile']  # data export path
+    
+    def resetComers(self):
+        self.newcomers = {
+            "amb": None,  # ambient brightness
+            "scr": None,  # screen brightness
+            "pct": None,  # (corrected) brightness percentage
+            "cbs": None,  # current backlight step
+            "sbs": None,  # suggested backlight step
+            "cts": None,  # capture timestamp (epoch)
+        }
 
     '''checks how much time passed from loop start and sleeps so that the
-    entire cycle duration is 'self.args.gap', if that is not possible
-    (time passed > self.args.gap), doesn't sleeps.
+    entire cycle duration is arguments['gap'], if that is not possible
+    (time passed > arguments['gap']), doesn't sleeps.
     Also checks if there are signals waiting to be processed
     '''
     def drowsiness(self):
         sleeptime = 0.01
-        iternum = (self.args.gap + self.timeref - time.time()) / sleeptime
+        iternum = (
+            (self.arguments['gap'] + self.timeref - time.time()) / sleeptime)
         if iternum < 1:
             iternum = 1
         for x in range(int(round(iternum, 0))):
@@ -69,7 +80,7 @@ class mainLoop():
             # PAUSE / RESUME
             elif self.sig == 'pause':
                 self.step0.stopCapture()
-                if not self.args.gui:
+                if not self.arguments['gui']:
                     sys.stdout.write('\n  =====  PAUSE  =====  \r')
                     sys.stdout.flush()
                 while self.sig is not 'resume':
@@ -132,16 +143,16 @@ class mainLoop():
     def mainOp(self):
         self.step0 = imaging()
         self.step1 = execution(
-            self.args.steps,
-            self.args.bkofs,
-            self.args.invert,
-            self.args.ofs,
-            self.args.delta,
-            pos = self.args.path,
+            self.arguments['steps'],
+            self.arguments['bkofs'],
+            self.arguments['invert'],
+            self.arguments['offset'],
+            self.arguments['delta'],
+            pos = self.arguments['path'],
         )
         self.lock = _locker()
         self.basetime = time.time() - self.sct
-        self.step0.initializeCamera(self.args.cam)
+        self.step0.initializeCamera(self.arguments['cam'])
         self.step0.startCapture()
         self.step0.getFrameBriSimple()
 
@@ -152,41 +163,39 @@ class mainLoop():
     def exeloop(self):
         self.timeref = time.time() # start time of the loop
         self.step0.getFrameBriSimple()
-        if self.args.screen is True:
-            mul = self.step0.getScreenMul()
-        if (
-            self.args.screen is True and
-            self.basetime + self.sct <= time.time()
-        ):
-            self.step0.getScreenBri()
-            self.basetime = time.time()
-        elif self.args.screen is None:
+        if self.arguments['screen'] is True:
+            if (
+                not self.arguments.keys().count('scrmul') or
+                not self.arguments['scrmul']
+            ):
+                self.arguments['scrmul'] = self.step0.getScreenMul()
+            if self.basetime + self.sct <= time.time():
+                self.step0.getScreenBri()
+                self.basetime = time.time()
+        else:
             self.step0.scr = 0.0
-        self.step1.elaborate(self.step0.amb, self.step0.scr, mul)
-        if (
-            ( self.args.auto ) and
-            (
-                self.lock.lock is False or
-                len(self.step1.data['percent']) < 15 or
-                abs(
-                    self.step1.data['step'][-1] -
-                    self.step1.data['bkstp'][-1]
-                ) > 1
-            )
-        ):
+        self.step1.elaborate(
+            self.step0.amb, self.step0.scr, self.arguments['scrmul'])
+        if ((
+            self.arguments['auto']
+            ) and (
+            self.lock.lock is False or
+            len(self.step1.data['percent']) < 15 or
+            abs(self.step1.data['step'][-1] - self.step1.data['bkstp'][-1]) > 1
+        )):
             if self.step1.WriteStep() is True:
                 self.lock.put()
-        self.step1.PopDataValues(self.args.avg)
-        if self.args.logdata:
+        self.step1.PopDataValues(self.arguments['avg'])
+        if self.arguments['record']:
             for val in self.step1.data:
-                self.step1.history[val].append( self.step1.data[val][-1] )
+                self.step1.history[val].append(self.step1.data[val][-1])
 
         self.ValuesAverage = (
-            sum(self.step1.data['percent'])/len(self.step1.data['percent'])
+            sum(self.step1.data['percent']) / len(self.step1.data['percent'])
         )
 
-        if not self.args.gui:
-            if self.args.verbose:
+        if not self.arguments['gui']:
+            if self.arguments['verbose']:
                 sys.stdout.write(
                     '%3s:%3d %3s:%3d %3s:%3s ' % (
                         "AMB",round(self.step1.data['ambient'][-1], 0),
@@ -202,7 +211,7 @@ class mainLoop():
                     "AVG", round(self.ValuesAverage,2), "%",
                     "N", len(self.step1.data['percent']),
                     "⚷" if self.lock.lock == True else " ",
-                    "⌚" if self.args.logdata == True else " ",
+                    "⌚" if self.arguments['record'] == True else " ",
                 )
             )
         sys.stdout.flush()
