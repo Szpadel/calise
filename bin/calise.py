@@ -78,7 +78,7 @@ def printBriefInfos():
             [:-len('/' + os.path.basename(options.settings['path']))],
         ' -> '.join([
             str(options.settings['bkofs']),
-            str(options.settings['bkofs'] + options.settings['steps'])]),
+            str(options.settings['bkofs'] + options.settings['steps'] - 1)]),
         options.settings['delta'], options.settings['offset'],
         options.settings['gap'], 1.0 / options.settings['gap'],
         options.settings['avg'],

@@ -36,7 +36,7 @@ queryCommands = ['dump', 'dumpall', 'dumpsettings', 'check']
 serviceCommands = execCommands + queryCommands
 
 # Default service version's settings
-defaultSettings = {
+defSerSettings = {
     'capnum': 14,
     'capint': 0.1,
     'loglevel': 'info',
@@ -52,7 +52,7 @@ defaultSettings = {
 }
 
 # Default interactive version's settings
-defIntSetings = {
+defIntSettings = {
     'gap': 0.67,
     'avg': int(round((90 / 0.67), 0)),
     'logfile': None,
@@ -72,18 +72,18 @@ defIntSetings = {
 
 # Lookup for setting key and if not present, set necessary optionals to default
 def checkSettingsArguments():
-    for key in defaultSettings.keys():
+    for key in defSerSettings.keys():
         if not key in settings.keys():
-            settings[key] = defaultSettings[key]
+            settings[key] = defSerSettings[key]
 
 
 # simple wrapper for default settings
 def getDefaultSettings(prefix):
     prefix = os.path.basename(prefix)
     if prefix == '%s' % __LowerName__:
-        return defIntSetings
+        return defIntSettings
     elif prefix == '%sd' % __LowerName__: 
-        return defaultSettings
+        return defSerSettings
 
 
 def get_path(pname='default', sufx='.conf'):
@@ -246,13 +246,13 @@ class serviceGetArgs():
             metavar='<int>', dest='capnum', default=None,
             help=(
                 "set number of captures per \"capture session\" (default: %d)"
-                % defaultSettings['capnum']))
+                % defSerSettings['capnum']))
         parser.add_argument(
             '--capture-interval',
             metavar='<float>', dest='capint', default=None,
             help=(
                 "set seconds between consecutive captures in a \"capture "
-                "session\" (default: %f)" % defaultSettings['capint']))
+                "session\" (default: %f)" % defSerSettings['capint']))
         parser.add_argument(
             '--screen',
             action='store_true', default=None, dest='yscreen',
@@ -287,7 +287,7 @@ class serviceGetArgs():
             metavar='<float>', dest='dusksm', default=None,
             help=(
                 "set the multiplier for dawn/sunset sleeptime (default: %f)"
-                % defaultSettings['dusksm']))
+                % defSerSettings['dusksm']))
         parser.add_argument(
             '--day-sleeptime',
             metavar='<float>', dest='dayst', default=None,
@@ -434,7 +434,7 @@ class coreGetArgs():
             metavar='<float>', dest='gap', default=None,
             help=(
                 "seconds between consecutive captures (default: %f)"
-                % defIntSetings['gap']))
+                % defIntSettings['gap']))
         parser.add_argument(
             '--verbose',
             action='store_true', default=None, dest='yverbose',
