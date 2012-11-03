@@ -519,7 +519,7 @@ class coreGetArgs():
         elif args['nscreen']:
             settings['screen'] = False
         if args['scrmul']:
-            settings['scrmul'] = args['scrmul']
+            settings['scrmul'] = float(args['scrmul'])
         if args['yauto']:
             settings['auto'] = True
         elif args['nauto']:
