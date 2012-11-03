@@ -201,7 +201,8 @@ class calCapture (threading.Thread):
             if scr > 0:
                 dstep = self.adjust_scale(
                     self.com.get_values('step', self.bfile))
-                self.com.correction(self.data[idx], scr, dstep)
+                amul = self.cap.getScreenMul()
+                self.com.correction(self.data[idx], scr, amul, dstep)
                 self.data[idx] -= self.com.cor
         self.partial = idxTot
 
