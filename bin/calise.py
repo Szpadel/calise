@@ -130,8 +130,8 @@ def cliInterface():
 def isServiceAlive():
     ''' temporary fix until proper implementation
     Checks for a running service instance and if so, stops it (at the end of
-    execution service will be started again, take a look at the end of this
-    page
+    execution, service will be started again, take a look at the end of this
+    page)
 
     NOTE: This implementation is extremely experimental and temporary, real
           implementation needs return codes from dbus objects (can be done
@@ -167,13 +167,26 @@ def pauseService(action='pause'):
 def main():
     parseArguments(sys.argv[1:])
     setNiceness(10)
+    
+    if (
+        options.settings.keys().count('configure') and
+        options.settings['configure'] is True
+    ):
+        from calise.calibration.calibration import CliCalibration
+        if options.settings.keys().count('path'):
+            confpath = options.settings['path']
+        else:
+            confpath = None
+        CliCalibration(confpath)
+        return 0
+    
     keepOnly('profile')
     logLevel, logFile = tempLoggerInit(sys.argv[0])
     tempdir = os.path.dirname(logFile)
-    #setSetting('logfile', logObject.name)            # NOTE: service-only
+    #setSetting('logfile', logFile)            # NOTE: service-only
     lg = options.wlogger(logLevel, logFile)
     global logger
-    logger = logging.getLogger('.'.join([__LowerName__, 'root']))
+    logger = logging.getLogger('.'.join([__LowerName__, 'root']))    
     logger.info("Searching valid profiles within search paths")
     loadProfile()
     parseArguments(sys.argv[1:])
@@ -202,11 +215,7 @@ def main():
             logger.critical("Missing needed settings!")
             return 11
     # checked till there...OK
-    if options.settings['configure'] is True:
-        from calise.calibration import CliCalibration
-        CliCalibration(defName, brPath=options.settings['path'])
-        return 0
-    # NOTE: interactive-only from now on ↓
+    # NOTE: interactive-only from now on
     if os.getenv('DISPLAY') is not None and options.settings['gui'] is True:
         try:
             import calise.QtGui

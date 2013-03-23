@@ -1,5 +1,5 @@
 # List of source files containing translatable strings.
 
 bin/calise
-calise/calibration.py
+calise/calibration/calibration.py
 calise/QtGui.py

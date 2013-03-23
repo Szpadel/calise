@@ -16,6 +16,7 @@
 #    along with Calise.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import math
 import threading
 import time
@@ -256,4 +257,55 @@ def dec_convert(dec):
     p = math.floor((dec - g) * 60.0)
     s = round(((dec - g) * 60.0 - p) * 60.0, 0)
     return g, p, s
+
+
+def getMinimumLevel(path):
+    """ Obtain minimum backlight step level
+
+    Write values on given interface path until no IOError errno22 is returned
+    (IOError:errno22 means the value is not acceptable).
+
+    """
+    errMsgTimeout = "write() function timed-out"
+    currentValue = readInterfaceData(path)
+    startTime = time.time()
+    minValue = 0
+    while True:
+        try:
+            with open(path, 'w') as fp:
+                fp.write(str(minValue))
+                break
+        except IOError as err:
+            if err.errno == 22:
+                minValue += 1
+        if time.time() - startTime > 1:
+            sys.stderr.write(errMsgTimeout + '\n')
+            sys.exit(1)
+    with open(path, 'w') as fp:
+        fp.write(str(currentValue))
+    return minValue
+
+
+def readInterfaceData(path):
+    """ Simple file content reader with errors exception """
+    IOErrorMsgStr = "test IOError message string"
+    try:
+        with open(path) as fp:
+            interfaceData = fp.readline()
+        return int(interfaceData)
+    except IOError:
+        sys.stderr.write(IOErrorMsgStr + '\n')
+        raise
+        sys.exit(101)
+
+
+def writeInterfaceData(path, data):
+    """ Simple file content writer with errors exception """
+    IOErrorMsgStr = "test IOError message string"
+    try:
+        with open(path, 'w') as fp:
+            fp.write(str(int(data)))
+    except IOError:
+        sys.stderr.write(IOErrorMsgStr + '\n')
+        sys.exit(102)
 

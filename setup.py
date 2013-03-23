@@ -13,11 +13,12 @@ from DistUtilsExtra.auto import setup
 from distutils.core import Extension
 
 
-# Reads file "infos.py" in that package and obtains from there the
-#
-# This "fake" class has been implemented because import priority between
-# root and workingDir modules varies from Distro to Distro.
-#
+''' Reads file "infos.py" in that package and obtains from there the
+
+This "fake" class has been implemented because import priority between
+root and workingDir modules varies from Distro to Distro.
+
+'''
 class replacement():
     def __init__ (self, path ):
         self.__CapitalName__ = 'Calise'
@@ -39,15 +40,16 @@ def getsd():
     return path
 
 
-# Developement versions track
-#
-# Returns either:
-#  - SVN revision in the form SVN-XXXX, where XXXX is the revision number
-#  - GIT shorthash in the form GIT-xxxxxxx, where xxxxxxx are first 7 chars of
-#    sha1 hash
-#
-# Returns calise.infos.__version__ in no git nor svn exist
-#
+''' Developement versions track
+
+Returns either:
+  - SVN revision in the form SVN-XXXX, where XXXX is the revision number
+  - GIT shorthash in the form GIT-xxxxxxx, where xxxxxxx are first 7 chars of
+    sha1 hash
+
+Returns calise.infos.__version__ in no git nor svn exist
+
+'''
 def get_svn_revision(path=None):
     if path is None:
         path = getsd()
@@ -123,13 +125,14 @@ addModule2 = Extension(
     'calise.camera',
     sources = ['src/modules/camera.c'],)
 # actual setup
-setup(name='calise',
-      version=get_svn_revision(),
-      description="automatically adjust backlight trough a camera",
-      author='Nicolò Barbon',
-      author_email='smilzoboboz@gmail.com',
-      url='http://calise.sourceforge.net/',
-      license='GNU GPL v3',
-      ext_modules=[addModule1, addModule2],
-     )
+setup(
+    name='calise',
+    version=get_svn_revision(),
+    description="automatically adjust backlight trough a camera",
+    author='Nicolò Barbon',
+    author_email='smilzoboboz@gmail.com',
+    url='http://calise.sourceforge.net/',
+    license='GNU GPL v3',
+    ext_modules=[addModule1, addModule2],
+)
 restoreScriptExtensions()

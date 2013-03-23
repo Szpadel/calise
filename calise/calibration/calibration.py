@@ -25,7 +25,8 @@ from xdg.BaseDirectory import save_config_path
 import textwrap
 from select import select
 
-from calise.calibrateFunctions import *
+from calise.calibration.functions import *
+from calise.calibration.interactiveui import setBrightness
 from calise import console
 from calise.infos import __LowerName__
 from calise.capture import imaging
@@ -47,40 +48,6 @@ def customWrap(textstring, width=None):
 
 def fprnt(stringa):
     print customWrap(stringa)
-
-
-def getMinimumLevel(blpath):
-    ''' Obtain semi-automatically minimum backlight step level
-
-    Obtain minimum backlight level trying to write values on the device until
-    no IOError errno22 is returned.
-    If user doesn't confirm within timeout, obtained value is discarded.
-
-    '''
-    with open(blpath) as fp:
-        currentLevel = int(fp.read())
-    startTime = time.time()
-    x = 0
-    while True:
-        try:
-            with open(blpath, 'w') as fp:
-                fp.write(str(x))
-            fprnt(_(
-                "This (%d) should be the minimum backlight step possible on "
-                "this machine.") % x)
-            dummy = query_yes_no(customWrap(_(
-                "Are you able to see this message?")),
-                default='no', timeout=20)
-            with open(blpath, 'w') as fp:
-                fp.write(str(currentLevel))
-            if dummy == 'yes':
-                return x
-            else:
-                break
-        except IOError as err:
-            if err.errno == 22:
-                x += 1
-    return None
 
 
 def query_yes_no(question, default="yes", timeout=None):
@@ -119,7 +86,6 @@ def query_yes_no(question, default="yes", timeout=None):
         else:
             choice = raw_input().lower()
         if default is not None and choice == '':
-            print default
             return default
         elif choice in valid.keys():
             return valid[choice]
@@ -135,17 +101,19 @@ class CliCalibration():
     Every "passage" has a short introduction that describes what does it do,
     then there's the function and newly generated values (from self or simply
     returned) are printed after a ">>> " string.
+    
+    NOTE: cfn > ConfigFileName, bfp > BrightnessFilePath
 
     '''
-    def __init__(self, configpath=None, brPath=None):
+    def __init__(self, bfp=None):
 
         # Profile name passage
         fprnt("Step 1 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
         fprnt(_(
             "This passage gets a valid profile name to be stored as config "
             "file\'s filename."))
-        configname = self.ConfigFilenamePassage(configpath)
-        fprnt(">>> " + _("profile name: %s") % str(configname))
+        profileName = self.ProfileFilenamePassage()
+        fprnt(">>> " + _("profile name: %s") % str(profileName))
         fprnt(">>> " + _("profile path: %s") % str(self.configpath))
         fprnt("\n")
 
@@ -154,7 +122,7 @@ class CliCalibration():
         fprnt(_(
             "This passage lists all available sysfs backlight directories "
             "and, if more than one, asks wich has to be used."))
-        self.BacklightPathPassage(brPath)
+        self.BacklightPathPassage(bfp)
         fprnt(">>> " + _("sysfs backlight path: %s") % self.bfile)
         fprnt("\n")
 
@@ -223,49 +191,61 @@ class CliCalibration():
         fprnt("\n")
         self.WritePassage()
 
-    # Obtains a valid config filename
-    def ConfigFilenamePassage(self, configname=None):
-        if configname is None and os.getuid() != 0:
+    def ProfileFilenamePassage(self):
+        """ Obtains a valid profile filename
+        
+        (non-root user) If profile name is not already set (e.g.: default.conf)
+        the user is asked for a profile name.
+        
+        (root user) Profile name and path are already set to "/etc/calise" and 
+        "default.conf"
+        
+        NOTE: pn ~ ProfileName
+        
+        """
+        pn = None
+        defaultPath = os.path.join(
+            save_config_path(__LowerName__), 'default' + '.conf')
+        if not os.path.isfile(defaultPath):
+            pn = 'default'
+        if pn is None and os.getuid() != 0:
             while True:
-                configname = raw_input(customWrap(_(
-                    "Enter a name for the new profile") + ": "))
-                if (
-                    configname != configname + os.path.dirname(configname) or
-                    configname == ""):
+                pn = raw_input(customWrap(_(
+                    "Please, enter a name for the new profile") + ": "))
+                if pn != pn + os.path.dirname(pn) or pn == "":
                     fprnt(_("Please retry and enter a valid name."))
                     fprnt(_(
                         "Since it\'ll be a filename, chars not supported by "
-                        "your os will raise an error") + "\n")
+                        "your os will raise an error") + '\n')
                     time.sleep(1.5)
-                elif os.listdir(
-                    save_config_path(__LowerName__)).\
-                    count(configname + ".conf") > 0:
+                elif os.listdir(save_config_path(__LowerName__)).\
+                    count(pn + ".conf") > 0:
                     dummy = query_yes_no(customWrap(_(
-                        "Selected profile already exists, overwrite?")), 'no')
+                        "A profile file with the same name already exists, "
+                        "overwrite?")), 'no')
                     if dummy == 'yes':
                         break
                 else:
                     break
-                sys.stdout.write("\n")
+                sys.stdout.write('\n')
             self.configpath = os.path.join(
-                save_config_path(__LowerName__), configname + '.conf')
+                save_config_path(__LowerName__), pn + '.conf')
         elif os.getuid() == 0:
-            configname = __LowerName__
-            configpath = os.path.join('/', 'etc', configname + '.conf')
+            pn = __LowerName__
+            configpath = os.path.join('/', 'etc', pn + '.conf')
             if os.path.isfile(configpath):
-                dummy = query_yes_no(customWrap(
-                    _("Profile already exists, overwrite?")), 'no')
+                dummy = query_yes_no(customWrap(_(
+                    "A global profile already exists, overwrite?")), 'no')
                 if dummy == 'no':
                     sys.exit(11)
             self.configpath = configpath
-            configname = None
+            pn = None
         else:
             self.configpath = os.path.join(
-                save_config_path(__LowerName__), configname + '.conf')
-        return configname
+                save_config_path(__LowerName__), pn + '.conf')
+        return pn
 
     # Gets sys/class/backlight infos
-    # CAN SKIP = YES (profile already exists)
     def BacklightPathPassage(self, brPath=None):
         if not brPath:
             bfile_list = []
@@ -280,39 +260,49 @@ class CliCalibration():
         if len(bfile_list) == 1:
             self.bfile = bfile_list[0]
             return self.bfile
-        # If cannot be skipped
-        if len(bfile_list) == 0:
+        elif len(bfile_list) == 0:
             sys.stderr.write('\n')
             sys.stderr.write(_(
                 "Your system does not appear to have controllable "
-                "backlight") + '\n')
+                "backlight interfaces") + '\n')
             sys.exit(1)
         fprnt('\n' + '\n'.join(
             ["%d: %s" % (x + 1, bfile_list[x]) for x in range(len(bfile_list))]
         ))
-        print("")
-        fprnt(_(
-            "NOTE: To be sure you pick the right one, try to change "
-            "manually the backlight level and check with a simple cat "
-            "command (eg. \"cat %s\") wich one of the path displayed changes "
-            "its value when changing backlight level.") % bfile_list[0])
+        sys.stdout.write('\n')
         while True:
+            tbfile = None
             bfile_idx = raw_input(customWrap(_(
-                "Choose one of the path listed above (None=%d): ") % 1))
+                "Choose one of the paths listed above (None=%d): ") % 1))
             try:
                 if bfile_idx == '':
-                    self.bfile = bfile_list[0]
-                    break
+                    tbfile = bfile_list[0]
                 elif int(bfile_idx) <= len(bfile_list) and int(bfile_idx) > 0:
-                    self.bfile = bfile_list[int(bfile_idx) - 1]
-                    break
+                    tbfile = bfile_list[int(bfile_idx) - 1]
                 else:
                     fprnt(_(
-                        "Please retry and enter an integer in the "
+                        "Please retry and enter an integer within the "
                         "valid range 1-%d!") % len(bfile_list))
             except ValueError, err:
                 fprnt(_("Please retry and enter an integer!"))
-            sys.stdout.write("\n")
+            # Backlight test, write minimum then maximum supported value twice,
+            # the user can test if selected interface was the right one
+            if tbfile:
+                tcv = readInterfaceData(tbfile)
+                for x in range(2):
+                    writeInterfaceData(tbfile, getMinimumLevel(tbfile))
+                    time.sleep(.33)
+                    writeInterfaceData(tbfile, readInterfaceData(
+                        os.path.join(os.path.dirname(tbfile), 'max_brightness')
+                    ))
+                    time.sleep(.33)
+                writeInterfaceData(tbfile, tcv)
+                dummy = query_yes_no(customWrap(_(
+                    "Did the screen just \"blink\" twice?")), 'no')
+                if dummy == 'yes':
+                    self.bfile = tbfile
+                    break
+            sys.stdout.write('\n')
         return self.bfile
 
     # Gets sys/class/backlight infos
@@ -332,21 +322,12 @@ class CliCalibration():
             step0 = computation()
             step0.get_values('all', self.bfile)
             fprnt(_(
-                "The program will now try to semi-automatically find the "
-                "minimum backlight level (before \"power-off\") for this "
-                "machine.") + '\n')
-            fprnt(_(
-                "NOTE: If you'll get a blank screen don't worry and "
-                "just wait the default timeout (20 seconds)") + '\n')
-            raw_input(customWrap(_("Hit ENTER or RETURN when ready")))
-            print("")
-            bkofs = getMinimumLevel(self.bfile)
-            if bkofs is None:
-                raw_input(customWrap(_(
-                    "Auto-get minimum backlight step somehow failed, "
-                    "trying to obtain the hard-way, set the backlight to "
-                    "minimum then hit RETURN or ENTER")))
-                bkofs = step0.bkstp
+                "The program will now display an interactive bar to adjust "
+                "backlight level (with left/right down/up arrow keys). Hit "
+                "\'Return\' when done.") + '\n')
+            bkofs = setBrightness(os.path.dirname(self.bfile))
+            sys.stdout.write('\n')
+            writeInterfaceData(self.bfile, step0.bkstp)
             steps = step0.bkmax
             if steps < bkofs:
                 invert = True
@@ -534,74 +515,12 @@ class CliCalibration():
             time.sleep(.1)
         fprnt(_("Capture thread started."))
         time.sleep(0.75)
-        print("")
-        while True:
-            tpct = int(round(120 * random(), 0))
-            tstp = int(round(self.bkofs - 1 + tpct / (100.0 / self.steps), 0))
-            if tstp > self.steps - 1 + self.bkofs:
-                tstp = self.steps - 1 + self.bkofs
-            elif tstp < self.bkofs:
-                tstp = self.bkofs
-            p = raw_input(customWrap(_(
-                "Choose a value for the current ambient brightness, consider "
-                "that the more brightness there is, the more precise will the "
-                "scale of the program be, supported values are backlight "
-                "steps or percentage (eg. %d or %d%%, percentage *can* be "
-                "over 100%% for particular needs): ") % (tstp, tpct)))
-            try:
-                if str(p)[-1] == '%':
-                    percentage = float(str(p)[:-1])
-                    curStep = int(round(
-                        self.bkofs - 1 + percentage / (100.0 / self.steps), 0
-                    ))
-                    if curStep >= self.steps - 1 + self.bkofs:
-                        curStep = self.steps - 1 + self.bkofs
-                    cap.getScreenBri()
-                    valThread.adjustValues(cap.scr)
-                    try:
-                        writeStep(curStep, self.bfile)
-                    except IOError as err:
-                        valThread.okToStop()
-                        valThread.join(10)
-                        brFileWriteErr(err, self.bfile)
-                    dummy = query_yes_no(customWrap(_(
-                            "Choosen percentage value roughly equals to the "
-                            "%dth backlight step, would you like to use that "
-                            "value?") % (curStep)), "yes")
-                    if dummy == "yes":
-                        break
-                elif (
-                    (int(p) >= self.bkofs) and
-                    (int(p) - self.bkofs < self.steps)):
-                    curStep = int(p)
-                    percentage = (
-                        (curStep + 1 - self.bkofs) *
-                        (100.0 / self.steps))
-                    cap.getScreenBri()
-                    valThread.adjustValues(cap.scr)
-                    try:
-                        writeStep(curStep, self.bfile)
-                    except IOError as err:
-                        valThread.okToStop()
-                        valThread.join(10)
-                        brFileWriteErr(err, self.bfile)
-                    dummy = query_yes_no(customWrap(_(
-                            'Choosen backlight step value roughly equals to '
-                            '%.2f%% of ambient brightness, would you like to '
-                            'use that value?') % (percentage)), 'yes')
-                    if dummy == 'yes':
-                        break
-                else:
-                    fprnt(_(
-                        'Please retry and enter a value according to the '
-                        'rules above'))
-                    time.sleep(1.5)
-                print("")
-            except ValueError:
-                fprnt(_(
-                    "Please retry and enter a value according to the rules "
-                    "above") + '\n')
-                time.sleep(1.5)
+        sys.stdout.write('\n')
+        curStep = int(setBrightness(os.path.dirname(self.bfile)))
+        sys.stdout.write('\n')
+        percentage = (curStep + 1 - self.bkofs) * (100.0 / self.steps)
+        cap.getScreenBri()
+        valThread.adjustValues(cap.scr)
         valThread.okToStop()
         valThread.join(10)
         self.delta = (valThread.average - self.offset) / (percentage ** 1.372)
