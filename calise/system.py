@@ -47,14 +47,35 @@ class computation():
         self.bkmax = None # maximum backlight step
         self.bkpow = None # 0 = power-on, 1 = power-off
 
-    # calculates ambient brightness correction using screen backlight value
     def correction(self, amb=0, scr=0, areamul=0, dstep=0, offset=0):
-        up_lim = 160.0
-        amb = amb - offset + 10
-        max_cor_mul = (2 * (up_lim - amb) ** 2) / ((amb + up_lim * 0.85) ** 2)
-        screen_mul = (scr / 255.0 ) ** 2
-        backlight_mul = (1.0 / 5.0) + (10 * dstep / (5.0 / 4.0))
+        """ Calculates ambient brightness correction using screen backlight
+    
+        Variable format specification:
+          amb, scr float 0~255 (brightness)
+          areamul  float 0.0 + (square area factor)
+          dstep    float 0~1   (backlight fit inside 0 (min) > 1 (max) range)
+
+        """
+        up_lim = 160.0 * (255.0 - offset) / 255
+        #amb = amb - offset + 10
+        #max_cor_mul = (2 * (up_lim - amb) ** 2) / ((amb + up_lim * 0.85) ** 2)
+        #screen_mul = (scr / 255.0 ) ** 2
+        #backlight_mul = (1.0 / 5.0) + (10 * dstep / (5.0 / 4.0))
         cor = amb * max_cor_mul * screen_mul * backlight_mul * areamul
+        
+        # NOTE: backlight_mul ranges 0 (1) <> 10
+        # max_cor_mul = (1 + 5 * (backlight_mul - 1)) * ((screen_mul / 255) ** (3 - 0.13 * backlight_mul)) + 1.5
+        # cor = max_cor_mul * (areamul ** 0.5)
+        backlight_mul = dstep * 10
+        screen_mul = (scr / 255.0) ** (3 - 0.13 * backlight_mul)
+        max_cor_mul = (1 + 5 * (backlight_mul - 1)) * screen_mul + 1.5
+        
+        amb_mul = amb * (255.0 - offset) / 255
+        
+        cor = max_cor_mul * (areamul ** 0.5) * ((up_lim - amb_mul) / up_lim)
+        
+        
+        
         if amb > up_lim:
             cor = 0
         self.cor = cor
