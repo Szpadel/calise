@@ -61,7 +61,7 @@ class computation():
         #max_cor_mul = (2 * (up_lim - amb) ** 2) / ((amb + up_lim * 0.85) ** 2)
         #screen_mul = (scr / 255.0 ) ** 2
         #backlight_mul = (1.0 / 5.0) + (10 * dstep / (5.0 / 4.0))
-        cor = amb * max_cor_mul * screen_mul * backlight_mul * areamul
+        #cor = amb * max_cor_mul * screen_mul * backlight_mul * areamul
         
         # NOTE: backlight_mul ranges 0 (1) <> 10
         # max_cor_mul = (1 + 5 * (backlight_mul - 1)) * ((screen_mul / 255) ** (3 - 0.13 * backlight_mul)) + 1.5
