@@ -290,53 +290,19 @@ class objects():
             return arbSlpVal - capture_time + cur_time
 
         sun = getSun(
-            self.arguments['latitude'], self.arguments['longitude'])
+            self.arguments['latitude'], self.arguments['longitude'], cur_time)
         daw = float(sun[0])
         sus = float(sun[1])
-
         # more or less the seconds that the sun needs to get from min to max
         # backlight step brightness
         daw_tw = int(sun[2])
         sus_tw = int(sun[3])
-
         # sleeptime between captures (for both dawn and sunset)
         daw_sl = daw_tw / 100.0
         sus_sl = sus_tw / 100.0
 
-        # happens on artic regions, where the sun is always above the horizon
-        if daw is True and sus is False:
-            self.newcomers['css'] = "day"
-            self.newcomers['nss'] = None
-            if self.arguments['weather']:
-                self.getWtr(cur_time)
-            else:
-                self.daytime_mul = 0.6
-            sleepTime = self.arguments['dayst'] * self.daytime_mul
-            if sleepTime + time.time() > self.newcomers['nss']:
-                sleepTime = self.newcomers['nss'] - time.time()
-        # happens on artic regions, where the sun never reaches above the
-        # horizon
-        elif daw is False and sus is True:
-            self.newcomers['css'] = "night"
-            self.newcomers['nss'] = None
-            if self.arguments['nightst'] == 0.0:
-                sleepTime = (
-                    int(datetime.date.today().strftime("%s")) +
-                    86400 - cur_time)
-            else:
-                sleepTime = self.arguments['nightst']
-        # happens on artic regions, where the sun never reaches 15 degrees
-        # above the horizon, so, actually, dawn/sunset time equals to half of
-        # the time the sun spends above the horizon
-        elif sus == daw + daw_tw:
-            if cur_time < daw + daw_tw / 2.0:
-                self.newcomers['css'] = "dawn"
-                sleepTime = daw_sl * self.arguments['dusksm']
-            else:
-                self.newcomers['css'] = "sunset"
-                sleepTime = daw_sl * self.arguments['dusksm']
         # dawn
-        elif cur_time > daw and cur_time <= daw + daw_tw:
+        if cur_time > daw and cur_time <= daw + daw_tw:
             self.newcomers['css'] = "dawn"
             self.newcomers['nss'] = daw + daw_tw - cur_time
             sleepTime = daw_sl * self.arguments['dusksm']
@@ -351,7 +317,7 @@ class objects():
             if cur_time > sus:
                 tmp = getSun(
                     self.arguments['latitude'], self.arguments['longitude'],
-                    cur_time + 24 * 60 * 60)
+                    cur_time + 86400)
                 daw = float(tmp[0])
             if self.arguments['nightst'] == 0.0:
                 sleepTime = daw - cur_time
