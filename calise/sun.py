@@ -28,100 +28,99 @@ from calise.infos import __LowerName__
 logger = logging.getLogger(".".join([__LowerName__, 'ephem']))
 
 
-def getDst(curTime=None):
-    ''' Daylight Saving Time (DST) shift
-
-    Get current (if any) dst shift for local timezone.
-    This is needed since all pyephem times are based upon GMT *without* any
-    dst setting.
-
+def convertPyEphemToEpoch(timeString):
+    ''' GMT string time to seconds since epoch converter
+    
+    Given a "YYYY/MM/DD HH:MM:SS" GMT time a time.tz struct is created and then
+    converted in localtime (wrong) epoch, corrected by timezone and dst shifts.
+    
+    NOTE: PyEphem lib works with GMT times but since converting between GMT and
+          localtime requires calendar lib (and some further coding) and calise
+          won't work behind the ephem I preferred ephem times over GMT.
     '''
-    zg = time.localtime(curTime)
-    wg = time.gmtime(curTime)
-    dst_shift = (
-        (wg.tm_hour * 60 + wg.tm_min) * 60 -
-        (zg.tm_hour * 60 + zg.tm_min) * 60 -
-        time.timezone)
-    if dst_shift > 12 * 3600:
-        dst_shift -= 24 * 3600
-    elif dst_shift < -12 * 3600:
-        dst_shift += 24 * 3600
-    return dst_shift
+    timeEpoch = (
+        time.mktime(time.strptime(str(timeString), "%Y/%m/%d %H:%M:%S")) - 
+        time.altzone)
+    return timeEpoch
 
 
-def getSun(latitude, longitude, curTime=None):
-    ''' Sun-related informations
-
-    Given lat/long this function returns rise_time and setting_time in
-    epoch and for how long (in sec) will the sunlight be "unstable" since
-    dawn/sunset.
-
-    NOTE: error exception ephem.NeverUpError means that the sun never reaches
-          chosen degrees above the horizon.
+def getSun(latitude, longitude, timestamp=None):
+    ''' Returns Sun rising and setting times and durations
+    
+    Given latitude and longitude, returns rising and setting epoch localtimes
+    and the time the Sun spends from -6 to 15 (and 15 to -6 respectively) above
+    the horizon.
+    
+    NOTE: recurrent integer "86400" is the number of seconds in a day.
+    
+    TODO: understand why obs.date increases after next_something functions...
+          re-setting variable every pyEphem query sucks.
     '''
-    if curTime is None:
-        curTime = time.time()
+    if timestamp == None:
+        timestamp = time.time()
+    # PyEphem observer setting
     obs = ephem.Observer()
     obs.lat = str(latitude)
     obs.long = str(longitude)
     sun = ephem.Sun()
-    dst = getDst(curTime)
-    # pyEphem works on utc time. This requires a forth conversion since every
-    # epoch obtained will be shifted by %timezone%
-    obs.date = datetime.date.fromtimestamp(curTime)
+    obs.date = datetime.date.fromtimestamp(timestamp)
+    # 00:00 of the day after %timestamp's one
+    epochRefer = (
+        float(datetime.date.fromtimestamp(timestamp).strftime("%s")) + 86400)
+    # considering civil twilight as rise/set time
+    obs.horizon = '-6'
     try:
-        # considering civil twilight as rise/set time
-        obs.horizon = '-6'
-        # civil rise and set times setting and epoch conversion
-        rise_time = obs.next_rising(sun).datetime()
-        rise_epoch = int(rise_time.strftime('%s')) - time.timezone - dst
-        set_time = obs.next_setting(sun).datetime()
-        set_epoch = int(set_time.strftime('%s')) - time.timezone - dst
+        riseStartEpoch = convertPyEphemToEpoch(obs.next_rising(sun))
+        obs.date = datetime.date.fromtimestamp(timestamp)
+        setEndEpoch = convertPyEphemToEpoch(obs.next_setting(sun))
         # increase horizon to calculate for how long the sunlight will rapidly
         # change intensity. 15 is arbitrary and tested only for 46.04N latitude
         obs.horizon = '15'
         try:
-            set_dur = obs.next_setting(sun).datetime()
-            set_dur = (
-                set_epoch - int(set_dur.strftime('%s')) + 
-                time.timezone + dst)
-            rise_dur = obs.next_rising(sun).datetime()
-            rise_dur = (
-                int(rise_dur.strftime('%s')) - rise_epoch -
-                time.timezone - dst)
-            # TODO: the 4 rows below are a crappy workaround, need to be fixed
-            if set_dur < 0:
-                set_dur += 24 * 60 * 60
-            if rise_dur < 0:
-                rise_dur += 24 * 60 * 60
+            riseEndEpoch = convertPyEphemToEpoch(obs.next_rising(sun))
+            obs.date = datetime.date.fromtimestamp(timestamp)
+            setStartEpoch = convertPyEphemToEpoch(obs.next_setting(sun))
+            riseDuration = riseEndEpoch - riseStartEpoch
+            setDuration = setEndEpoch - setStartEpoch
         except ephem.NeverUpError:
-            set_dur = set_epoch - rise_epoch
-            rise_dur = set_epoch - rise_epoch
+            # Sun rises but never reaches 15 grades above the horizon and so
+            # the whole day (from rise time to set time) will be a
+            # rising/setting phase
+            setDuration = (setEndEpoch - riseStartEpoch) / 2.0
+            riseDuration = (setEndEpoch - riseStartEpoch) / 2.0
     except ephem.NeverUpError:
-        rise_epoch = False
-        set_epoch = True
-        rise_dur = 0
-        set_dur = 0
+        # Sun never rises and so rising and setting times are set to 00:00 of
+        # %timestamp's day, meaning that rising, daylight and setting times
+        # will be set to 0 sec
+        riseStartEpoch = epochRefer - 86400
+        setEndEpoch = epochRefer - 86400
+        riseDuration = 0
+        setDuration = 0
     except ephem.AlwaysUpError:
+        # Sun will always be above the horizon (-6) and so rise is set to 00:00
+        # of %timestamp's day and set to 00:00 of the day after %timestamp's
+        # one, meaning there is no "night".
         obs.horizon = '15'
         try:
-            # 86400 below is the number of seconds of a day
-            set_epoch = int(datetime.date.today().strftime('%s')) + 86400
-            set_dur = (
-                set_epoch -
-                int(obs.next_setting(sun).datetime().strftime('%s')) +
-                time.timezone + dst)
-            rise_epoch = int(datetime.date.today().strftime('%s'))
-            rise_dur = (
-                int(obs.next_rising(sun).datetime().strftime('%s')) -
-                rise_epoch -
-                time.timezone - dst)
+            riseStartEpoch = epochRefer - 86400
+            riseEndEpoch = convertPyEphemToEpoch(obs.next_rising(sun))
+            obs.date = datetime.date.fromtimestamp(timestamp)
+            setEndEpoch = epochRefer
+            setStartEpoch = convertPyEphemToEpoch(obs.next_setting(sun))
+             # Compute durations
+            riseDuration = riseEndEpoch - riseStartEpoch
+            setDuration = setEndEpoch - setStartEpoch
         except ephem.AlwaysUpError:
-            rise_epoch = True
-            set_epoch = False
-            rise_dur = 0
-            set_dur = 0
-    return rise_epoch, set_epoch, rise_dur, set_dur
+            riseStartEpoch = epochRefer - 86400
+            setEndEpoch = epochRefer
+            riseDuration = 0
+            setDuration = 0
+        except ephem.NeverUpError:
+            riseStartEpoch = epochRefer - 86400
+            setEndEpoch = epochRefer
+            riseDuration = 86400 / 2
+            setDuration = 86400 / 2
+    return riseStartEpoch, setEndEpoch, riseDuration, setDuration
 
 
 def url_parse(lat, lon, parser='wunderground'):
