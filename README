@@ -1,4 +1,4 @@
-Calise 0.4.1 (beta)
+Calise (beta)
 
 Calise (acronym for Camera Light Sensor) is a lightweight program that uses any v4l2 compatible camera as a light sensor: obtains ambient brightness and calculates correct backlight setting according to a user-defined scale.
 For simple usage instructions type "calise --help" or "calised --help" and for a detailed explanation please refer to man page.
