@@ -872,35 +872,35 @@ device_open (PyDeviceObject *self)
 
 static PyMethodDef device_methods[] = {
     /* core-global */
-    {"setName", (PyCFunction)device_set, METH_VARARGS,
+    {"set_name", (PyCFunction)device_set, METH_VARARGS,
      "Set Device path for camera Device."},
-    {"openPath", (PyCFunction)device_open, METH_NOARGS,
+    {"open_path", (PyCFunction)device_open, METH_NOARGS,
      "Open given camera Device."},
     {"initialize", (PyCFunction)device_init, METH_NOARGS,
      "Initialize given camera Device."},
-    {"startCapture", (PyCFunction)start_capturing, METH_NOARGS,
+    {"start_capture", (PyCFunction)start_capturing, METH_NOARGS,
      "Start capturing on given camera Device."},
-    {"stopCapture", (PyCFunction)stop_capturing, METH_NOARGS,
+    {"stop_capture", (PyCFunction)stop_capturing, METH_NOARGS,
      "Stop capturing on given camera Device."},
     {"uninitialize", (PyCFunction)device_uninit, METH_NOARGS,
      "Uninitialize given camera Device."},
-    {"closePath", (PyCFunction)device_close, METH_NOARGS,
+    {"close_path", (PyCFunction)device_close, METH_NOARGS,
      "Close given camera Device."},
     /* core-action */
-    {"readFrame", (PyCFunction)read_frame, METH_NOARGS,
+    {"read_frame", (PyCFunction)read_frame, METH_NOARGS,
      "Reads a frame from given camera Device."},
     /* other */
-    {"getName", (PyCFunction)device_get_name, METH_NOARGS,
+    {"get_name", (PyCFunction)device_get_name, METH_NOARGS,
      "Grab dev_name from camera Device."},
-    {"queryCtrl", (PyCFunction)query_control, METH_VARARGS,
+    {"query_ctrl", (PyCFunction)query_control, METH_VARARGS,
      "Query given camera Device's control idx."},
-    {"setCtrl", (PyCFunction)set_control, METH_VARARGS,
+    {"set_ctrl", (PyCFunction)set_control, METH_VARARGS,
      "Set given camera Device's control idx."},
     {NULL}
 };
 
 static PyMethodDef gmodule_methods[] = {
-    {"listDevices", (PyCFunction)list_cameras, METH_NOARGS,
+    {"list_devices", (PyCFunction)list_cameras, METH_NOARGS,
      "List available v4l2 cameras."},
     {NULL}
 };
