@@ -208,12 +208,10 @@ def main():
     # If necessary settings cannot be found (bad or non existing profiles
     # and no cli integration), log critical error and exit.
     if checkMissingSettings(options.settings.keys()):
-        if options.settings['profile'] == 'default':
-            options.settings['configure'] = True
-            defName = 'default'
-        else:
-            logger.critical("Missing needed settings!")
-            return 11
+        logger.critical(
+            "Missing needed settings. "
+            "Either provide them manually or run with \"--configure\".")
+        return 11
     # checked till there...OK
     # NOTE: interactive-only from now on
     if os.getenv('DISPLAY') is not None and options.settings['gui'] is True:

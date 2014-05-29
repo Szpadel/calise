@@ -72,7 +72,9 @@ class computation():
         
         amb_mul = amb * (255.0 - offset) / 255
         
-        cor = max_cor_mul * (areamul ** 0.5) * ((up_lim - amb_mul) / up_lim)
+        cor = max_cor_mul * ((up_lim - amb_mul) / up_lim)
+        if areamul:
+            cor = cor * (areamul ** 0.5)
         
         
         

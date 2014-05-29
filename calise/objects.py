@@ -136,7 +136,7 @@ class objects():
     
     def getScrMul(self):
         self.arguments['scrmul'] = self.capture.getScreenMul()
-        print "newmul: %f" % self.arguments['scrmul']
+        #print "newmul: %f" % self.arguments['scrmul']
 
     # obtains brightness percentage value, corrected if needed (by the amount
     # of brightness coming from the screen)
