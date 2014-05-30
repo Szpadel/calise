@@ -164,7 +164,9 @@ def mainService(kargs):
     # If necessary settings cannot be found (bad or non existing profiles
     # and no cli integration), log critical error and exit.
     if checkMissingSettings(options.settings.keys()):
-        logger.critical("Missing needed settings!")
+        logger.critical(
+            "Missing needed settings. "
+            "Either provide them manually or run with \"--configure\".")
         retCode = 11
     else:
         # Generate PID

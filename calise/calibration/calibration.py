@@ -107,6 +107,18 @@ class CliCalibration():
     '''
     def __init__(self, bfp=None):
 
+        # Introduction
+        fprnt(_(
+            "Welcome to calise calibration.\nCalibration process will take "
+            "just a minute but please pay attenction to every step because "
+            "a precise calibration means a precise execution and even though "
+            "impressive results can be achieved with calise, it can became "
+            "stressing and/or useless if wrongly calibrated.\n\n"
+            "If you get wrong/funny results even if calise was calibrated, "
+            "just run calibration again (most passage will be skipped if "
+            "a profile file already exists).\n\n"))
+        pn = raw_input(customWrap(_(
+                    "Press [ENTER] when ready")))
         # Profile name passage
         fprnt("Step 1 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
         fprnt(_(
@@ -129,9 +141,9 @@ class CliCalibration():
         # Backlight steps passage
         fprnt("Step 3 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
         fprnt(_(
-            "This passage obtains available backlight steps with selected "
-            "sysfs backlight path and displays them ordered from lower to "
-            "higher backlight level."))
+            "This passage asks to pick a backlight value that will be used "
+            "as \'minimum\' (the one associated with the darkest possible "
+            "setting."))
         self.BacklightPassage()
         fprnt(
             ">>> " + _("backlight steps: %s")
@@ -168,9 +180,9 @@ class CliCalibration():
         # Camera white balance offset passage
         fprnt("Step 6 of 7\n⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺⎺")
         fprnt(_(
-            "This passage lets the program be aware of the lower lightness "
-            "that can be registered by the camera to contrast its white "
-            "balance feature."))
+            "This passage lets the program be aware of the lower brightness "
+            "that can be registered by the camera to contrast, eventualy, "
+            "its white balance feature."))
         self.OffsetPassage()
         fprnt(
             ">>> " + _("Average camera offset: %.1f") % round(self.offset, 1))
@@ -211,7 +223,8 @@ class CliCalibration():
         if pn is None and os.getuid() != 0:
             while True:
                 pn = raw_input(customWrap(_(
-                    "Please, enter a name for the new profile") + ": "))
+                    "Please, enter a name for a new profile (use \'default\' "
+                    "to overwrite the default profile)") + ": "))
                 if pn != pn + os.path.dirname(pn) or pn == "":
                     fprnt(_("Please retry and enter a valid name."))
                     fprnt(_(
@@ -323,8 +336,8 @@ class CliCalibration():
             step0.get_values('all', self.bfile)
             fprnt(_(
                 "The program will now display an interactive bar to adjust "
-                "backlight level (with left/right down/up arrow keys). Hit "
-                "\'Return\' when done.") + '\n')
+                "the backlight level (with left/right down/up arrow keys). "
+                "Press [ENTER] or [RETURN] when done.") + '\n')
             bkofs = setBrightness(os.path.dirname(self.bfile))
             sys.stdout.write('\n')
             writeInterfaceData(self.bfile, step0.bkstp)
@@ -350,8 +363,8 @@ class CliCalibration():
             lat = geo['lat']
             lon = geo['lon']
             dummy = query_yes_no(customWrap(_(
-                "The program has found these coordinates (\"%s\": %s, %s) through "
-                "geoip lookup, would you like to use these value?")
+                "The program has found these coordinates (\"%s\": %s, %s) "
+                "through geoip lookup, would you like to use these value?")
                 % (geo['city'], lat, lon)), "yes")
             print("")
             if dummy == "yes":
@@ -406,8 +419,7 @@ class CliCalibration():
         while True:
             line = raw_input(customWrap(_(
                 "Please enter your latitude and longitude as comma separated "
-                "float degrees (take a look a the examples above), if not "
-                "interested in this feature just leave blank: ")))
+                "float degrees (take a look a the examples above): ")))
             if line:
                 line = line.replace(', ', ',').split(',')
                 try:
@@ -484,7 +496,7 @@ class CliCalibration():
             self.offset = config.getfloat('Camera', 'offset')
         else:
             raw_input(customWrap(_(
-                "Cover the webcam and then press ENTER or RETURN")))
+                "Cover the webcam and then press [ENTER] or [RETURN]")))
             fprnt(
                 _('Now calibrating') + ", " +
                 _("do not uncover the webcam") + "...")
@@ -502,8 +514,8 @@ class CliCalibration():
     # CAN SKIP = NO
     def ValuePassage(self):
         raw_input(customWrap(_(
-            "Remove any obstruction from the camera and press ENTER or RETURN "
-            "when ready to start")))
+            "Remove any obstruction from the camera and press [ENTER] or "
+            "[RETURN] when ready to start")))
         sys.stdout.write(_("Now calibrating") + "... ")
         sys.stdout.flush()
         valThread = calCapture(
