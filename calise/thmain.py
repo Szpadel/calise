@@ -16,8 +16,9 @@
 #    along with Calise.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from calise import thcamera
-from calise import thscreen
+modules = {}
+for module in options.get_modules():  # should display enabled modules
+    modules[module['name']] = __import__(module['name'])
 
 
 def sdev(values):
@@ -30,7 +31,6 @@ def sdev_list_processor(values, threshold=1):
 
     Perform a per-element standard deviation check, elements above or below
     standard deviation's threshold (which can be at most '1') are removed.
-
     '''
     avg = sum(values) / float(len(values))
     dev = sdev(values)
@@ -45,92 +45,98 @@ def sdev_list_processor(values, threshold=1):
 class ServiceMainThread():
 
     def service_capture(self, number, sleeptime, threshold=1):
-        ''' Service screen and camera capture function
-
-        This function gets values from 'camera_thread' and
-        (if loaded/availble) 'screen_thread'.
+        """ Service screen and camera capture function
         
-        To be sure that camera values are trustworthy, after 'number'
-        captures have been taken, values are compared one-to-others
-        upon standard deviation and, at each passage, wrong ones are
-        discarded.
-        If non-wrong values are less than 'number', another capture
-        cycle is started withing the same capture session (maintaining
-        correct values from previous cycles) until correct values are
-        at least more than half of 'number'.
-
-        '''
-        values = list()
-        self.camera_thread = thcamera.CameraThread(device)
-        self.camera_thread.start()
-        while not self.camera_thread.is_alive():
-            time.sleep(0.01)
-        # If "screen" module is loaded activate screen thread and ask
-        # for a screen brightness capture (will only be checked) after
-        # the whole camera block.
-        if arguments['screen']:
-            self.screen_thread = thscreen.ScreenThread()
-            self.screen_thread.start()
-            while not self.screen_thread.is_alive():
+        This function gets values from the specified input module and
+        (if loaded/availble) from 'screen' module.
+        
+        <number>    number of captures to be done
+        <sleeptime> time to wait between each capture
+        <threshold> max error (in /255) permitted in capture values
+        
+        NOTE: To be sure that input values are trustworthy, after
+              'number' captures have been taken, values are compared
+              one-to-others upon standard deviation and, at each
+              passage, wrong ones are discarded.
+              If non-wrong values are less than 'number', another
+              capture cycle is started within the same capture session
+              (maintaining correct values from previous cycles) until
+              correct values are at least more than half of 'number'.
+        """
+        for module in options.get_modules()
+            if module['type'] == 'input' or module['name'] == 'screen'
+                self.threads[module['type']][module['name']] = \
+                    modules[module['name']].MainThread(module['settings'])
+        # If 'screen' module is loaded activate screen thread and ask
+        # for a screen brightness capture (will only be checked after
+        # the whole input block).
+        if 'screen' in list(self.threads['correction'].keys()):
+            while not self.threads['correction']['screen'].is_alive():
                 time.sleep(0.01)
-            thscreen.GetEvent.set()
-        # outer camera cycle - End of screen block
-        while len(values) < number * .5:
-            # if not the first execution of the cycle warn
-            if values:
-                logger.warning("Capture precision is too low, requesting "
-                               "additional captures")
-            # inner camera cycle (capture)
-            while len(values) < number:
-                thcamera.GetEvent.set()
-                starttime = time.time()
-                thcamera.SendEvent.wait()
-                thcamera.SendEvent.clear()
-                temp_value = self.camera_thread.brightness
-                values.append(temp_value)
-                # Time between captures is calculated, removing the time
-                # needed to get the frame from the camera.
-                waittime = starttime + sleeptime - time.time()
-                if waittime > 0:
-                    time.sleep(waittime)
-                logger.debug(
-                    "raw values: %s" % 
-                    ' '.join(["%4.1f" % k for k in values]))
-            # After capture cycle ends, "number" captures have been
-            # obtained. All values out of threshold range will be
-            # removed.
-            corrected_values = sdev_list_processor(values,threshold)
-            while values != corrected_values:
-                values = corrected_values
+                modules['screen'].GetEvent.set()
+        # Only *one* input module is allowed per execution.
+        # TODO: More than one input module at the same time may improve
+        #       value precision.
+        values = []
+        for name in list(self.threads['input'].keys()):
+            while not self.threads['input'][name].is_alive():
+                time.sleep(0.01)
+            while len(values) < number * .5:
+                # since $values is empty on the first execution of this cycle,
+                # the warning message below apply only on 2nd cycle execution
+                # onward.
+                if values:
+                    logger.warning("Capture precision is too low, requesting "
+                                   "additional captures")
+                # inner camera cycle (capture)
+                while len(values) < number:
+                    modules[name].GetEvent.set()
+                    starttime = time.time()
+                    modules[name].SendEvent.wait()
+                    modules[name].SendEvent.clear()
+                    temp_value = self.threads['input'][name].brightness
+                    values.append(temp_value)
+                    # Time between captures is calculated, removing the time
+                    # needed to get the frame from the camera.
+                    waittime = starttime + sleeptime - time.time()
+                    if waittime > 0:
+                        time.sleep(waittime)
+                    logger.debug(
+                        "raw: %s" % 
+                        ' '.join(["%4.1f" % k for k in values]))
+                # After capture cycle ends, $number captures have been
+                # obtained. All values out of threshold range will be removed.
                 corrected_values = sdev_list_processor(values,threshold)
-            logger.debug(
-                    "corrected values: %s" % 
-                    ' '.join(["%4.1f" % k for k in values]))
-        # At this point "values" has at least "number"/2 entries and its
-        # data is reliable (max error < threshold).
-        camera_value = float(sum(values)) / len(values)
-        logger.debug("ambient_bri: %4.1f" % camera_value)
-        thcamera.AbortEvent.set()
-        # If "screen" module is loaded process the send request
-        # returned from the corresponding thread and get screen
-        # brightness value.
-        if arguments['screen']:
-            thscreen.SendEvent.wait()
-            thscreen.SendEvent.clear()
-            screen_value = self.screen_thread.brightness
-            logger.debug("display_bri: %4.1f" % screen_value)
-            screen_multiplier = self.screen_thread.multiplier
-            thscreen.AbortEvent.set()
-        # So far we have:
-        #     - a reliable camera value average
-        #     - (optional) a screen value (0% > 85% from center)
-        #     - (optional) a screen-size multiplier
-        #
-        # TODO: Continue with functions that will process the above raw
-        #       data.
-        #
-        # NOTE: Data-processing functions should be the same for both
-        #       service_capture and application_capture.
+                while values != corrected_values:
+                    values = corrected_values
+                    corrected_values = sdev_list_processor(values,threshold)
+                logger.debug(
+                        "valid: %s" % 
+                        ' '.join(["%4.1f" % k for k in values]))
+            # At this point $values has at least $number/2 entries and its
+            # data is reliable (max error < threshold).
+            input_value = float(sum(values)) / len(values)
+            logger.debug("ambient_brightness: %4.1f" % input_value)
+            modules[name].AbortEvent.set()
+        # If "screen" module is loaded, process the send request returned
+        # from the corresponding thread and get screen brightness value.
+        if 'screen' in list(self.threads['correction'].keys()):
+            modules['screen'].SendEvent.wait()
+            screen_value = self.threads['correction']['screen'].brightness
+            screen_multiplier = self.threads['correction']['screen'].multiplier
+            logger.debug("display_brightness: %4.1f" % screen_value)
+            logger.debug("display_multiplier: %.2f" % screen_multiplier)
+            modules['screen'].SendEvent.clear()
+            modules['screen'].AbortEvent.set()
+        # Cleanup phase.
+        for name in list(self.threads['input'].keys()):
+            while self.threads['input'][name].is_alive():
+                time.sleep(0.01)
+                waste = self.threads['input'].pop(name)
+        for name in list(self.threads['correction'].keys()):
+            while self.threads['correction'][name].is_alive():
+                time.sleep(0.01)
+                waste = self.threads['correction'].pop(name)
 
 
 
@@ -152,7 +158,7 @@ class ServiceMainThread():
         the fucntion, upon min and max values set by the user.
         
         NOTE: any 'camera_value' correction (eg. backlight brightness
-              correction from fucntion 'get_brightness_correction')
+              correction from function 'get_brightness_correction')
               have to be applied BEFORE passing 'camera_value' to this
               function.
         '''
@@ -262,3 +268,32 @@ class ServiceMainThread():
                         os.path.join(device_path, option))
                 raise
         return content
+
+'''
+        TODO: MODULES
+        
+              input:        (float, o [0 > 1]) camera, light sensor, etc
+              correction:   RESERVED
+              computation:  RESERVED
+              output:       (float, i [0 > 100]) baclight, etc
+              
+              for module in input modules (at least 1) get input data
+              for module in correction modules get input data and > correct <
+              > computate <
+              for module in output modules do something with data
+
+              command-line arguments:
+                  --enable/--disable [<module1>[,<module2>,<moduleN>]]
+              
+              choose modules (among installed) on calibration
+              
+              modules should have:
+                  MainThread() # execution thread
+                                 should respond to:
+                                 GetEvent.set() > get brightness value
+                                 
+                  GetInfo()
+                  Configure()  # calibration per module (should be called on
+                                 'main' caibration if module is enabled and
+                                 must be independant.
+'''
