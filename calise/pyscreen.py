@@ -1,4 +1,4 @@
-#    Copyright (C)   2011-2013   Nicolo' Barbon
+#    Copyright (C)   2011-2014   Nicolo' Barbon
 #
 #    This file is part of Calise.
 #

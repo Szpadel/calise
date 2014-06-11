@@ -21,6 +21,7 @@
 #include <Python.h>
 #include <stdio.h>
 #include <X11/Xlib.h>
+#include <X11/extensions/dpms.h>
 
 
 /* standard cameramodule python-error */
@@ -48,7 +49,7 @@ get_size(PyObject *self, PyObject *args)
         xmm, ymm;
 
     display = XOpenDisplay(screen_name);
-    if ( !display )
+    if (!display)
     {
         return NULL;
     }
@@ -88,11 +89,32 @@ get_brightness(PyObject *self, PyObject *args)
         pct;
 
     display = XOpenDisplay(screen_name);
-    if ( !display )
+    if (!display)
     {
         return NULL;
     }
     
+    // get dpms status and if that's the case, return NULL (from xset)
+    int dummy;
+    BOOL onoff;
+    CARD16 state;
+
+    if (DPMSQueryExtension(display, &dummy, &dummy))
+    {
+        if (DPMSCapable(display))
+        {
+            DPMSInfo(display, &state, &onoff);
+            if (onoff)
+            {
+                if (state != DPMSModeOn)
+                {
+                    XCloseDisplay(display);
+                    Py_RETURN_NONE;
+                }
+            }
+        }
+    }
+
     // window frame size definition
     pct = 0.85;  // arbitrary value for frame crop: only pixels from center to 85% of height/lenght are computed.
     w = (int) (pct * XDisplayWidth(display, 0));
@@ -103,6 +125,7 @@ get_brightness(PyObject *self, PyObject *args)
     root_window=XRootWindow(display, XDefaultScreen(display));
     ximage = XGetImage(display, root_window, x,y, w,h, AllPlanes, ZPixmap);
     if (ximage == (XImage *) NULL)
+        XCloseDisplay(display);
         return NULL;
 
     XCloseDisplay(display);

@@ -1,4 +1,4 @@
-#    Copyright (C)   2011-2013   Nicolo' Barbon
+#    Copyright (C)   2011-2014   Nicolo' Barbon
 #
 #    This file is part of Calise.
 #
@@ -16,6 +16,7 @@
 #    along with Calise.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import math
 import time
 import threading
 
@@ -23,12 +24,85 @@ from calise import pyscreen
 from calise.infos import __LowerName__
 
 
-logger = logging.getLogger(".".join([__LowerName__, 'screen_thread']))
-
-
+# Module properties
+properties = {
+    'name': 'screen',
+    'type': 'correction',
+    'description':
+        'Compute the amount to be subtracted from ambient brightness '
+        'value (the one obtained from input modules) to remove the brightness '
+        'coming from the screen.',
+    'settings': {},
+}
+#Events definition
 SendEvent = threading.Event()
 GetEvent = threading.Event()
 AbortEvent = threading.Event()
+logger = logging.getLogger(
+    ".".join([__LowerName__, '%s_thread' % properties['name']]))
+
+def get_info():
+    """ Get global module informations """
+    global properties
+    return properties
+
+def compute_correction(ambient,area,screen=0.0,backlight=0.0):
+    """ Ambient brightness value correction
+
+    These are the functions that give a fairly correct value of the
+    amount of brightness to be removed from ambient brightness values.
+
+    NOTE: I wasn't able to reverse the main correction function
+          (actually it can't be reversed for most of its values since
+          it is not bijective) so I blessed the computation capabilities
+          of processors and brute-forced the result...
+
+    WARNING: because of the non-bijectivity, errors may occur in ambient
+             value range 15-35 with high backlight values.
+
+             Just tested a bit:
+
+                screen size           -> 19"
+                screen backlight      -> 60%+
+                xscreen brightness    -> 240+ (almost full white)
+                brightness percentage -> 22%~28% (depends on user prefs)
+
+             meaning that you may encounter errors only if the backlight is
+             far above (more than double) the "suggested" value.
+
+    max correction: -7.5 * (arctan(ambient/4.2 - 5.9) - pi/2)
+    correction multiplier 1: 0.2*cor + (cor - 0.2*cor) * screen brightness
+    correction multiplier 2: same with 'correction multiplier 1' instead of 'cor'
+    correction multiplier result:
+        0.04 + 0.16 * screen + 0.16 * backlight + 0.64 * screen * backlight
+
+    """
+    if None in [screen, backlight]:
+        return ambient
+    mult = (.04 + .16*screen + .16*backlight + .64*screen*backlight)*area
+    n = 0
+    p = 0.5  # computation pass (we don't need lab precision...)
+    prev = -7.5 * (math.atan((ambient-n)/4.2 - 5.9) - math.pi/2)
+    curr = -7.5 * (math.atan((ambient-n-p)/4.2 - 5.9) - math.pi/2)
+    # If correction is needed, enter the loop-cycle.
+    while not (
+        max(prev*mult+(ambient-n), curr*mult+(ambient-n-p)) > ambient and
+        min(prev*mult+(ambient-n), curr*mult+(ambient-n-p)) < ambient
+    ):
+        n += p
+        prev = curr
+        curr = -7.5 * (math.atan((ambient-n-p)/4.2 - 5.9) - math.pi/2)
+    # Sistematic erorr averages in -0.5/+0.5 and so the value resulting from
+    # correction is rounded up to an int (intended for 'camera' module only).
+    corrected_value = round(sum([ambient-n, ambient-n-p])/2.0, 0)
+    return corrected_value
+
+
+class Configure():
+
+    def __init__(self):
+        print(_("%s module configuration") % (properties['name'].capitalize()))
+        print("Nothing to configure yet.")
 
 
 class ScreenThread(threading.Thread):
@@ -49,7 +123,7 @@ class ScreenThread(threading.Thread):
         self.brightness = None
         self.multiplier = None
         self.th = _ScreenThreadFunctions()
-        threading.Thread.__init__(name="screen")
+        threading.Thread.__init__(name=properties['name'])
 
     def run(self):
         while True:
