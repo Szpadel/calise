@@ -246,7 +246,7 @@ query_control (PyDeviceObject *self, PyObject *args)
         }
     }
 
-    Py_BuildValue("(isiiiii)", vqueryctrl.id, vqueryctrl.name, vqueryctrl.minimum, vqueryctrl.maximum, vqueryctrl.step, vqueryctrl.default_value, vstructrl.value);
+    return Py_BuildValue("(isiiiii)", vqueryctrl.id, vqueryctrl.name, vqueryctrl.minimum, vqueryctrl.maximum, vqueryctrl.step, vqueryctrl.default_value, vstructrl.value);
 }
 
 
