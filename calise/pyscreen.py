@@ -19,7 +19,8 @@
 import os
 import logging
 
-from calise import screen
+# TODO: revert next line back to "from calise import screen"
+from calise import screenBrightness as screen
 from calise.infos import __LowerName__
 
 

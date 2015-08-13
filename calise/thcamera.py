@@ -25,37 +25,44 @@ from calise.infos import __LowerName__
 
 
 # Module properties
-properties = {
+_properties = {
     'name': 'camera',
     'type': 'input',
     'description':
         'Obtain ambient brightness values from any V4L2 compatible camera '
         'device.',
-    'settings': {'device': {}, 'offset': 0},
+    'settings': {'device': str, 'offset': int},
 }
 # Events definition
 SendEvent = threading.Event()
 GetEvent = threading.Event()
 AbortEvent = threading.Event()
-logger = logging.getLogger(
-    ".".join([__LowerName__, '%s_thread' % properties['name']]))
+_logger = logging.getLogger(
+    ".".join([__LowerName__, '%s_thread' % _properties['name']]))
 
-def get_info():
+def get_infos():
     """ Get global module informations """
-    global properties
-    return properties
+    return _properties
+
+def get_info(key):
+    """ Get a specific key from global module informations """
+    val = None
+    if key in list(_properties):
+        val = _properties[key]
+    return val
 
 
 class Configure():
 
     def __init__(self):
         self.th = _CameraThreadFunctions()
-        print(_("%s module configuration") % (properties['name'].capitalize()))
+        print(
+            _("%s module configuration") % (_properties['name'].capitalize()))
 
     def conf_device(self):
         """ Device sysfs informations setting
 
-        Set global properties['setting']['device'] to sysfs device
+        Set global _properties['setting']['device'] to sysfs device
         infos.
 
         NOTE: Must be executed *before* conf_offset, otherwise the
@@ -92,13 +99,13 @@ class Configure():
                     break
                 sys.stdout.write("\n")
         # Set global $device variable
-        global properties
-        properties['settings']['device'] = devices[index]
+        global _properties
+        _properties['settings']['device'] = devices[index]
 
     def conf_offset(self):
         """ Device's brightness offset setting
 
-        Set global properties['settings']['offset'] to the minimum
+        Set global _properties['settings']['offset'] to the minimum
         possible brightness that can be captured from the device.
 
         A lot of webcams never get 0/255 brightness value even with
@@ -114,7 +121,7 @@ class Configure():
               device that give 0 > 255 values as requested to every
               input modules.
         """
-        self.th.initialize(properties['settings'])
+        self.th.initialize(_properties['settings'])
         raw_input(customWrap(
             _("Cover the webcam and then press [ENTER] or [RETURN]")))
         values = []
@@ -126,8 +133,8 @@ class Configure():
                 values.append(brightness)
                 GetEvent.clear()
         self.th.capture_stop()
-        global properties
-        properties['settings']['offset'] = min(values)
+        global _properties
+        _properties['settings']['offset'] = min(values)
 
 
 class MainThread(threading.Thread):
@@ -147,7 +154,7 @@ class MainThread(threading.Thread):
     def __init__(self,settings):
         self.brightness = None
         self.th = _CameraThreadFunctions(settings)
-        threading.Thread.__init__(name=properties['name'])
+        threading.Thread.__init__(name=_properties['name'])
 
     def run(self):
         self.th.capture_start()

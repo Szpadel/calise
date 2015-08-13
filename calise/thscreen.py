@@ -19,13 +19,14 @@
 import math
 import time
 import threading
+import logging
 
 from calise import pyscreen
 from calise.infos import __LowerName__
 
 
 # Module properties
-properties = {
+_properties = {
     'name': 'screen',
     'type': 'correction',
     'description':
@@ -38,13 +39,22 @@ properties = {
 SendEvent = threading.Event()
 GetEvent = threading.Event()
 AbortEvent = threading.Event()
-logger = logging.getLogger(
-    ".".join([__LowerName__, '%s_thread' % properties['name']]))
+_logger = logging.getLogger(
+    ".".join([__LowerName__, '%s_thread' % _properties['name']]))
 
-def get_info():
-    """ Get global module informations """
-    global properties
-    return properties
+#def get_info():
+#    """ Get global module informations """
+#    return _properties
+
+def get_info(key=None):
+    """ Get a specific key from global module informations """
+    val = None
+    if key and key in list(_properties):
+        val = _properties[key]
+    elif not key:
+        val = _properties
+    return val
+
 
 def compute_correction(ambient,area,screen=0.0,backlight=0.0):
     """ Ambient brightness value correction
@@ -105,8 +115,8 @@ class Configure():
         print("Nothing to configure yet.")
 
 
-class ScreenThread(threading.Thread):
-    """ Screen Thread 
+class MainThread(threading.Thread):
+    """ Screen backlight Main Thread 
     
     This class is one of calise's core threads and communicates directly
     with the main thread.

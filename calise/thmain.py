@@ -17,7 +17,7 @@
 
 
 modules = {}
-for module in options.get_modules():  # should display enabled modules
+for module in options.get_modules():  # TODO: should display enabled modules
     modules[module['name']] = __import__(module['name'])
 
 
@@ -43,12 +43,21 @@ def sdev_list_processor(values, threshold=1):
 
 
 class ServiceMainThread():
+    
+    def init_thmodules(self):
+        self.threads = {
+            'input': None,
+            'correction': None,
+            'output': None,}
+        for module in options.get_modules()
+            self.threads[module['type']][module['name']] = \
+                modules[module['name']].MainThread(module['settings'])
 
     def service_capture(self, number, sleeptime, threshold=1):
         """ Service screen and camera capture function
         
         This function gets values from the specified input module and
-        (if loaded/availble) from 'screen' module.
+        (if loaded/available) from 'screen' module.
         
         <number>    number of captures to be done
         <sleeptime> time to wait between each capture
@@ -56,24 +65,13 @@ class ServiceMainThread():
         
         NOTE: To be sure that input values are trustworthy, after
               'number' captures have been taken, values are compared
-              one-to-others upon standard deviation and, at each
+              one-to-another upon standard deviation and, at each
               passage, wrong ones are discarded.
               If non-wrong values are less than 'number', another
               capture cycle is started within the same capture session
               (maintaining correct values from previous cycles) until
               correct values are at least more than half of 'number'.
         """
-        for module in options.get_modules()
-            if module['type'] == 'input' or module['name'] == 'screen'
-                self.threads[module['type']][module['name']] = \
-                    modules[module['name']].MainThread(module['settings'])
-        # If 'screen' module is loaded activate screen thread and ask
-        # for a screen brightness capture (will only be checked after
-        # the whole input block).
-        if 'screen' in list(self.threads['correction'].keys()):
-            while not self.threads['correction']['screen'].is_alive():
-                time.sleep(0.01)
-                modules['screen'].GetEvent.set()
         # Only *one* input module is allowed per execution.
         # TODO: More than one input module at the same time may improve
         #       value precision.
@@ -133,6 +131,7 @@ class ServiceMainThread():
             while self.threads['input'][name].is_alive():
                 time.sleep(0.01)
                 waste = self.threads['input'].pop(name)
+        
         for name in list(self.threads['correction'].keys()):
             while self.threads['correction'][name].is_alive():
                 time.sleep(0.01)
